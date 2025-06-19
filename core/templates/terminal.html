@@ -171,6 +171,12 @@
                             </button>
                         </div>
                     </form>
+
+                    <!-- Formulário de iniciar sessão -->
+                    <form id="atividades-form-iniciar">
+                        <ul id="atividades-iniciar-list" class="list-group list-group-flush mb-3"></ul>
+                        <button type="submit" id="iniciar-btn" class="btn btn-success btn-lg w-100" style="display:none;">Iniciar Sessão</button>
+                    </form>
                 </div>
             </div>
 
@@ -252,22 +258,9 @@
                     </div>
 
                     <div class="mb-2 fw-bold">Atividades da Sessão:</div>
-                    <ul id="session-activities-list" class="list-group mb-3"></ul>
-            
-                    <!-- NOVO BLOCO: Adicionar atividades diretamente na tela -->
-                    <form id="atividades-form-adicionar" style="display:none;" class="mb-3 border border-primary rounded p-3 bg-light position-relative">
-                        <div class="alert alert-info d-flex align-items-center mb-3" role="alert">
-                            <i class="bi bi-plus-circle me-2"></i>
-                            <div>Adicionando novas atividades à sessão</div>
-                        </div>
-                        <ul id="atividades-adicionar-list" class="list-group list-group-flush mb-3" style="max-height: 200px; overflow-y: auto;"></ul>
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary flex-fill" id="btn-confirmar-adicao" disabled>Adicionar Atividades</button>
-                            <button type="button" id="cancelar-adicionar-btn" class="btn btn-secondary flex-fill">Cancelar</button>
-                        </div>
-                    </form>
-            
-                    <button id="adicionarAtividadesBtn" class="btn btn-info btn-lg w-100 mb-2" aria-label="Adicionar Atividade"><i class="bi bi-plus-circle me-1"></i>Adicionar Atividade</button>
+                    <ul id="session-activities-list" class="list-group mb-3"></ul>      
+
+                    <button id="adicionarAtividadesBtn" class="btn btn-info btn-lg w-100 mb-2" aria-label="Adicionar Atividade"><i class="bi bi-plus-circle me-1"></i>Adicionar Atividade a sessao Teste</button>
                     <button id="finalizarSessaoBtn" class="btn btn-danger btn-lg w-100" aria-label="Finalizar Sessão"><i class="bi bi-stop-circle me-1"></i>Finalizar Sessão</button>
                 </div>
             </div>
@@ -1035,47 +1028,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    if (atividadesFormIniciar) {
-        atividadesFormIniciar.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            if (!appState.boxId) {
-                showToast('Selecione um box.', 'danger');
-                return;
-            }
-            const checkboxes = atividadesFormIniciar.querySelectorAll('input[type="checkbox"]:checked');
-            const atividades = Array.from(checkboxes).map(cb => parseInt(cb.value));
-            if (atividades.length === 0) {
-                showToast('Selecione pelo menos uma atividade.', 'danger');
-                return;
-            }
-            showLoading();
-            try {
-                const response = await fetch(`/api/boxes/${appState.boxId}/sessao-servico/iniciar/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${appState.jwtToken}`
-                    },
-                    body: JSON.stringify({ atividades })
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    showToast('Sessão iniciada com sucesso!', 'success');
-                    showStateActiveSession(data);
-                } else if (response.status === 409) {
-                    showToast('Já existe uma sessão ativa neste box. Redirecionando...', 'warning');
-                    await checkLoginStatus();
-                } else {
-                    showToast(data.detail || 'Erro ao iniciar sessão.', 'danger');
-                }
-            } catch (error) {
-                showToast('Erro ao iniciar sessão: ' + error.message, 'danger');
-            } finally {
-                hideLoading();
-            }
-        });
-    }
-
     if (finalizarSessaoBtn) {
         finalizarSessaoBtn.addEventListener('click', async function() {
             if (!appState.sessaoId || !appState.boxId) {
@@ -1127,7 +1079,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 // Carregar atividades disponíveis para adicionar
                 await loadActivitiesForAdding();
                 // Trocar o event listener do formulário para adicionar atividades
-                atividadesFormIniciar.onsubmit = async function(e) {
+                atividadesFormAdicionar.onsubmit = async function(e) {
                     e.preventDefault();
                     // Verifica se boxId está definido
                     if (!appState.boxId) {
@@ -1135,7 +1087,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         showToast('Erro: Box não selecionado.', 'danger');
                         return;
                     }
-                    const checkboxes = atividadesFormIniciar.querySelectorAll('input[type="checkbox"]:checked');
+                    const checkboxes = atividadesFormAdicionar.querySelectorAll('input[type="checkbox"]:checked');
                     const atividades = Array.from(checkboxes).map(cb => parseInt(cb.value));
                     console.log('[LOG] IDs das atividades selecionadas para adicionar:', atividades);
                     if (atividades.length === 0) {
@@ -1346,6 +1298,46 @@ window.testAdicionarAtividade = async function(atividadeId) {
 function getElapsedTime() {
     if (!appState.startTime) return 0;
     return Math.floor((Date.now() - appState.startTime.getTime()) / 1000); // segundos
+}
+
+if (atividadesFormIniciar) {
+    atividadesFormIniciar.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const checkboxes = atividadesFormIniciar.querySelectorAll('input[type="checkbox"]:checked');
+        const atividades = Array.from(checkboxes).map(cb => parseInt(cb.value));
+        console.log('[LOG CABRA] Atividades selecionadas para iniciar sessão:', atividades);
+        if (atividades.length === 0) {
+            showToast('Selecione pelo menos uma atividade.', 'danger');
+            return;
+        }
+        showLoading();
+        try {
+            const response = await fetch(`/api/boxes/${appState.boxId}/sessao-servico/iniciar/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${appState.jwtToken}`
+                },
+                body: JSON.stringify({ atividades })
+            });
+            const data = await response.json();
+            console.log('[LOG CABRA] Resposta da API ao iniciar sessão:', data);
+            if (response.ok) {
+                showToast('Sessão iniciada com sucesso!', 'success');
+                showStateActiveSession(data);
+            } else if (response.status === 409) {
+                showToast('Já existe uma sessão ativa neste box. Redirecionando...', 'warning');
+                await checkLoginStatus();
+            } else {
+                showToast(data.detail || 'Erro ao iniciar sessão.', 'danger');
+            }
+        } catch (error) {
+            console.error('[LOG CABRA] Erro ao iniciar sessão:', error);
+            showToast('Erro ao iniciar sessão: ' + error.message, 'danger');
+        } finally {
+            hideLoading();
+        }
+    });
 }
 </script>
 {% endblock %}
