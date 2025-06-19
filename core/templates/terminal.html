@@ -214,7 +214,7 @@
         <div id="state-iniciar" class="state" style="display: none;">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <h3 class="card-title">
+                    <h3 class="card-title" id="atividades-title">
                         <i class="bi bi-play-circle me-2"></i>
                         Iniciar Sessão
                     </h3>
@@ -249,6 +249,7 @@
                     <div id="info-inicio-sessao" class="mb-2 text-muted"></div>
                     <div class="progress mb-3" id="session-progress-bar-container" style="height: 12px; display: none;">
                         <div class="progress-bar" id="session-progress-bar" role="progressbar" style="width: 0%; min-width: 2px; height: 100%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+    <span id="session-progress-text" class="position-absolute start-50 translate-middle text-dark small">0%</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2 small text-muted">
                         <span><i class="bi bi-hourglass-split me-1"></i>Tempo Decorrido: <span id="session-elapsed-time">00:00:00</span></span>
@@ -268,7 +269,22 @@
             </div>
         </div>
     </div>
+<div id="atividades-container" style="display:none;">
+    <div class="card shadow-sm mt-3">
+        <div class="card-body">
+            <h3 class="card-title"><i class="bi bi-plus-circle me-2"></i>Adicionar Atividades</h3>
+            <form id="atividades-form-adicionar">
+                <ul id="atividades-adicionar-list" class="list-group list-group-flush mb-3"></ul>
+                <div class="d-grid gap-2">
+                    <button type="submit" id="btn-confirmar-adicao" class="btn btn-success" disabled>Confirmar</button>
+                    <button type="button" id="cancelar-adicionar-btn" class="btn btn-secondary">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
+</div>
+
 
 <!-- Modal de Senha -->
 <div class="modal fade" id="senhaModal" tabindex="-1" aria-hidden="true">
@@ -358,19 +374,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     const senhaInput = document.getElementById('senha');
     const togglePasswordBtn = document.getElementById('togglePassword');
     const spinnerOverlay = document.querySelector('.spinner-overlay');
-    const welcomeMessageSpan = document.getElementById('welcome-message');
-    const userNameSpan = document.getElementById('user-name');
     const atividadesIniciarList = document.getElementById('atividades-iniciar-list');
     const atividadesFormIniciar = document.getElementById('atividades-form-iniciar');
     const iniciarBtn = document.getElementById('iniciar-btn');
     const sessaoAtivaControls = document.getElementById('sessao-ativa-controls');
     const finalizarSessaoBtn = document.getElementById('finalizarSessaoBtn');
     const adicionarTriggerBtn = document.getElementById('adicionarAtividadesBtn');
-    const atividadesContainer = document.getElementById('atividades-container');
+
     const atividadesFormAdicionar = document.getElementById('atividades-form-adicionar');
     const atividadesListAdicionar = document.getElementById('atividades-adicionar-list'); // Corrected ID for add modal list
-    const adicionarBtn = document.getElementById('adicionar-btn');
-    const cancelarAdicionarBtn = document.getElementById('cancelar-adicionar-btn');
+
+
     const atividadesTitle = document.getElementById('atividades-title');
     const estadoIniciar = document.getElementById('state-iniciar');
 
@@ -1233,7 +1247,7 @@ async function atualizarSessaoEUI() {
 
 function atualizarNavbarUsuario() {
     const navbarUserBlock = document.getElementById('navbar-user-block');
-    const navbarUserSpan = document.getElementById('navbar-user-name');
+    const navbarUserSpan = document.getElementById("navbar-user-name");
     const storedFuncionario = localStorage.getItem('funcionario');
     if (navbarUserBlock && navbarUserSpan && storedFuncionario) {
         const user = JSON.parse(storedFuncionario);
