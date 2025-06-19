@@ -99,12 +99,11 @@
                     </li>
                     {% endif %}
                 </ul>
-                {% if user.is_authenticated %}
-                <div class="d-flex align-items-center">
+                <div class="d-flex align-items-center" id="navbar-user-block" style="display: none;">
                     <div class="dropdown">
                         <button class="btn btn-dark dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-person-circle me-2"></i>
-                            <span>{{ user.get_full_name|default:user.username }}</span>
+                            <span id="navbar-user-name"></span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
                             {% if user.is_staff %}
@@ -142,7 +141,6 @@
                         </ul>
                     </div>
                 </div>
-                {% endif %}
             </div>
         </div>
     </nav>

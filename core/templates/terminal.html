@@ -985,11 +985,17 @@ document.addEventListener('DOMContentLoaded', async function() {
                 funcionario = data.user;
                 jwtToken = data.access;
                 refreshToken = data.refresh;
+                // Atualiza o nome do usuário na navbar principal
+                const navbarUserSpan = document.querySelector('#navbarNav .dropdown-toggle span');
+                if (navbarUserSpan) {
+                    navbarUserSpan.textContent = data.user.nome_completo || data.user.username;
+                }
                 if (senhaModal) {
                     senhaModal.hide();
                 }
                 showAppView();
                 showStateIniciar(boxId);
+                atualizarNavbarUsuario();
             } else {
                 console.log('[LOG] Erro na autenticação:', data.detail);
                 showToast(data.detail || 'Senha incorreta', 'danger');
@@ -1185,6 +1191,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     } else {
         console.warn('[LOG] Botão Adicionar Atividade não encontrado no DOM');
     }
+
+    // Preenche o nome do usuário na navbar ao carregar a página
+    atualizarNavbarUsuario();
 });
 
 async function atualizarSessaoEUI() {
@@ -1204,6 +1213,19 @@ async function atualizarSessaoEUI() {
     // Esconde o formulário de adicionar atividades, se estiver aberto
     if (atividadesFormAdicionar) atividadesFormAdicionar.style.display = 'none';
     if (finalizarSessaoBtn) finalizarSessaoBtn.style.display = 'inline-block';
+}
+
+function atualizarNavbarUsuario() {
+    const navbarUserBlock = document.getElementById('navbar-user-block');
+    const navbarUserSpan = document.getElementById('navbar-user-name');
+    const storedFuncionario = localStorage.getItem('funcionario');
+    if (navbarUserBlock && navbarUserSpan && storedFuncionario) {
+        const user = JSON.parse(storedFuncionario);
+        navbarUserSpan.textContent = user.nome_completo || user.username;
+        navbarUserBlock.style.display = 'flex';
+    } else if (navbarUserBlock) {
+        navbarUserBlock.style.display = 'none';
+    }
 }
 </script>
 {% endblock %}
