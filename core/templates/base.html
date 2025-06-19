@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Gestão de Boxes{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        .navbar-nav .nav-link {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+        }
+        .navbar-nav .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .dropdown-item {
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .dropdown-item i {
+            font-size: 1.1rem;
+        }
+        .user-info {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 0.5rem;
+        }
+        @media (max-width: 991.98px) {
+            .navbar-nav .nav-link {
+                padding: 0.75rem 1rem;
+                margin: 0.25rem 0;
+            }
+            .user-info {
+                border-bottom: none;
+                padding: 1rem;
+                margin: 0;
+                background-color: rgba(255, 255, 255, 0.05);
+            }
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body class="min-vh-100 d-flex flex-column">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="/">
+                <i class="bi bi-box me-2"></i>
+                Gestão de Boxes
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="bi bi-terminal me-1"></i>Terminal
+                        </a>
+                    </li>
+                    {% if request.user.is_staff %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="/relatorios/">
+                            <i class="bi bi-graph-up me-1"></i>Relatórios
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-plus-circle me-1"></i>Cadastros
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-dark">
+                            <li>
+                                <a class="dropdown-item" href="/cadastrar-funcionario/">
+                                    <i class="bi bi-person-plus"></i>Funcionário
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/cadastrar-filial/">
+                                    <i class="bi bi-building-add"></i>Filial
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/cadastrar-box/">
+                                    <i class="bi bi-box-seam"></i>Box
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/cadastrar-atividade/">
+                                    <i class="bi bi-list-task"></i>Atividade
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    {% endif %}
+                </ul>
+                {% if user.is_authenticated %}
+                <div class="d-flex align-items-center">
+                    <div class="dropdown">
+                        <button class="btn btn-dark dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle me-2"></i>
+                            <span>{{ user.get_full_name|default:user.username }}</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                            {% if user.is_staff %}
+                            <li class="user-info">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-shield-check me-2"></i>
+                                    <span>Administrador</span>
+                                </div>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/admin/">
+                                    <i class="bi bi-gear"></i>Administração
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            {% endif %}
+                            <li>
+                                <a class="dropdown-item" href="/alterar-senha/">
+                                    <i class="bi bi-key"></i>Alterar Senha
+                                </a>
+                            </li>
+                            <li>
+                                {% if user.is_staff %}
+                                <form method="post" action="/admin/logout/" style="margin: 0;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item text-danger">Sair do Admin</button>
+                                </form>
+                                {% else %}
+                                <form method="post" action="/logout/" style="margin: 0;" onsubmit="localStorage.removeItem('jwtToken'); localStorage.removeItem('refreshToken'); localStorage.removeItem('funcionario'); setTimeout(function(){ window.location.href='/terminal/'; }, 100);">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item text-danger">Sair</button>
+                                </form>
+                                {% endif %}
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow-1 py-4">
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <footer class="bg-light py-3 mt-auto">
+        <div class="container">
+            <div class="text-center text-muted">
+                <small>&copy; {% now "Y" %} Gestão de Boxes. Todos os direitos reservados.</small>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

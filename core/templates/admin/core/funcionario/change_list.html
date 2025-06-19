@@ -1,0 +1,11 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+
+{% block object-tools-items %}
+  <li>
+    <a href="{% url 'cadastrar_funcionario' %}" class="addlink">
+      {% trans 'Cadastrar Funcionário Manualmente' %}
+    </a>
+  </li>
+  {{ block.super }}
+{% endblock %}

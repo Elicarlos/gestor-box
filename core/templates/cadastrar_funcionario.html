@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-7 col-lg-5">
+      <div class="card shadow-sm">
+        <div class="card-body p-4">
+          <div class="text-center mb-4">
+            <i class="bi bi-person-plus-fill fs-1 text-primary"></i>
+            <h2 class="h3 mb-1">Cadastrar Funcionário</h2>
+            <p class="text-muted small mb-0">Preencha os dados abaixo para adicionar um novo funcionário</p>
+          </div>
+
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert alert-{{ message.tags }} alert-dismissible fade show py-2 small" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close small" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+
+          <form method="post" class="needs-validation" id="cadastro-form" novalidate>
+            {% csrf_token %}
+            
+            <div class="mb-3">
+              <label for="id_matricula" class="form-label small">Matrícula</label>
+              {{ form.matricula }}
+              {% if form.matricula.errors %}
+                <div class="invalid-feedback small">{{ form.matricula.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label for="id_nome" class="form-label small">Nome completo</label>
+              {{ form.nome }}
+              {% if form.nome.errors %}
+                <div class="invalid-feedback small">{{ form.nome.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label for="id_senha" class="form-label small">Senha</label>
+              <div class="input-group">
+                {{ form.senha }}
+                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('id_senha')">
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
+              <div class="progress mt-2" style="height: 3px;">
+                <div class="progress-bar" id="senhaForca" role="progressbar" style="width: 0%"></div>
+              </div>
+              <small class="form-text text-muted x-small">{{ form.senha.help_text }}</small>
+              {% if form.senha.errors %}
+                <div class="invalid-feedback small">{{ form.senha.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label for="id_confirmar_senha" class="form-label small">Confirmar senha</label>
+              <div class="input-group">
+                {{ form.confirmar_senha }}
+                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('id_confirmar_senha')">
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
+              {% if form.confirmar_senha.errors %}
+                <div class="invalid-feedback small">{{ form.confirmar_senha.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-4">
+              <label for="id_filial" class="form-label small">Filial</label>
+              {{ form.filial }}
+              {% if form.filial.errors %}
+                <div class="invalid-feedback small">{{ form.filial.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger py-2 small">
+                {% for error in form.non_field_errors %}
+                  {{ error }}
+                {% endfor %}
+              </div>
+            {% endif %}
+
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-primary py-2">
+                <i class="bi bi-person-plus me-2"></i>Cadastrar Funcionário
+              </button>
+              <a href="/admin/" class="btn btn-outline-secondary py-2">
+                <i class="bi bi-arrow-left me-2"></i>Voltar
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+:root {
+  --primary-color: #0d6efd;
+  --success-color: #198754;
+  --danger-color: #dc3545;
+  --warning-color: #ffc107;
+}
+
+.card {
+  border-radius: 0.8rem;
+  border: none;
+}
+
+.form-control, .form-select {
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.5rem !important;
+  border: 1px solid #dee2e6;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(13, 110, 253, 0.2);
+}
+
+.form-label {
+  font-weight: 500;
+  margin-bottom: 0.3rem;
+}
+
+.invalid-feedback {
+  font-size: 0.8rem;
+  color: var(--danger-color);
+}
+
+.x-small {
+  font-size: 0.75rem;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+  .card-body {
+    padding: 1.2rem !important;
+  }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('cadastro-form');
+    const senha = document.getElementById('id_senha');
+    const confirmarSenha = document.getElementById('id_confirmar_senha');
+    const senhaForca = document.getElementById('senhaForca');
+    
+    function avaliarForcaSenha(senha) {
+        let pontos = 0;
+        if (senha.length >= 8) pontos += 25;
+        if (senha.match(/[A-Z]/)) pontos += 25;
+        if (senha.match(/[0-9]/)) pontos += 25;
+        if (senha.match(/[^A-Za-z0-9]/)) pontos += 25;
+        
+        senhaForca.style.width = pontos + '%';
+        
+        if (pontos <= 25) {
+            senhaForca.className = 'progress-bar bg-danger';
+        } else if (pontos <= 50) {
+            senhaForca.className = 'progress-bar bg-warning';
+        } else if (pontos <= 75) {
+            senhaForca.className = 'progress-bar bg-info';
+        } else {
+            senhaForca.className = 'progress-bar bg-success';
+        }
+    }
+    
+    senha.addEventListener('input', function() {
+        avaliarForcaSenha(this.value);
+        validarSenhas();
+    });
+    
+    confirmarSenha.addEventListener('input', validarSenhas);
+    
+    function validarSenhas() {
+        if (confirmarSenha.value) {
+            if (senha.value !== confirmarSenha.value) {
+                confirmarSenha.classList.add('is-invalid');
+                confirmarSenha.nextElementSibling.nextElementSibling.textContent = 'As senhas não coincidem';
+            } else {
+                confirmarSenha.classList.remove('is-invalid');
+            }
+        }
+    }
+    
+    form.addEventListener('submit', function(e) {
+        if (!form.checkValidity()) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+});
+
+function togglePassword(inputId) {
+    const input = document.getElementById(inputId);
+    const button = input.nextElementSibling;
+    const icon = button.querySelector('i');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
+    }
+}
+
+function showToast(message, type = 'success') {
+    const toastContainer = document.getElementById('toast-root');
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+    bsToast.show();
+    toast.addEventListener('hidden.bs.toast', () => { toast.remove(); });
+}
+</script>
+{% endblock %}

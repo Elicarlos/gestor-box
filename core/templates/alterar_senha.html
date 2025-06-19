@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5" style="max-width:500px;">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h2 class="card-title text-center mb-4">Alterar Senha</h2>
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+      <form method="post" id="alterarSenhaForm">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label for="senha_atual" class="form-label">Senha atual</label>
+          <div class="input-group">
+            <input type="password" class="form-control" id="senha_atual" name="senha_atual" required>
+            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('senha_atual')">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label for="nova_senha" class="form-label">Nova senha</label>
+          <div class="input-group">
+            <input type="password" class="form-control" id="nova_senha" name="nova_senha" required 
+                   pattern="^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$" 
+                   title="A senha deve ter pelo menos 8 caracteres, incluindo letras e números">
+            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('nova_senha')">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
+          <div class="progress mt-2" style="height: 5px;">
+            <div class="progress-bar" id="senhaForca" role="progressbar" style="width: 0%"></div>
+          </div>
+          <small class="form-text text-muted">
+            A senha deve ter pelo menos 8 caracteres, incluindo letras e números
+          </small>
+        </div>
+        <div class="mb-4">
+          <label for="nova_senha2" class="form-label">Confirme a nova senha</label>
+          <div class="input-group">
+            <input type="password" class="form-control" id="nova_senha2" name="nova_senha2" required>
+            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('nova_senha2')">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
+          <div class="invalid-feedback" id="senha-feedback">
+            As senhas não coincidem
+          </div>
+        </div>
+        <div class="d-grid gap-2">
+          <button type="submit" class="btn btn-primary" id="submitBtn">
+            <i class="bi bi-key me-2"></i>Alterar Senha
+          </button>
+          <a href="/" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Voltar
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('alterarSenhaForm');
+    const novaSenha = document.getElementById('nova_senha');
+    const novaSenha2 = document.getElementById('nova_senha2');
+    const senhaForca = document.getElementById('senhaForca');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    function avaliarForcaSenha(senha) {
+        let pontos = 0;
+        if (senha.length >= 8) pontos += 25;
+        if (senha.match(/[A-Z]/)) pontos += 25;
+        if (senha.match(/[0-9]/)) pontos += 25;
+        if (senha.match(/[^A-Za-z0-9]/)) pontos += 25;
+        
+        senhaForca.style.width = pontos + '%';
+        
+        if (pontos <= 25) {
+            senhaForca.className = 'progress-bar bg-danger';
+        } else if (pontos <= 50) {
+            senhaForca.className = 'progress-bar bg-warning';
+        } else if (pontos <= 75) {
+            senhaForca.className = 'progress-bar bg-info';
+        } else {
+            senhaForca.className = 'progress-bar bg-success';
+        }
+    }
+    
+    novaSenha.addEventListener('input', function() {
+        avaliarForcaSenha(this.value);
+        validarSenhas();
+    });
+    
+    novaSenha2.addEventListener('input', validarSenhas);
+    
+    function validarSenhas() {
+        const senha1 = novaSenha.value;
+        const senha2 = novaSenha2.value;
+        
+        if (senha2) {
+            if (senha1 !== senha2) {
+                novaSenha2.classList.add('is-invalid');
+                submitBtn.disabled = true;
+            } else {
+                novaSenha2.classList.remove('is-invalid');
+                submitBtn.disabled = false;
+            }
+        }
+    }
+    
+    form.addEventListener('submit', function(e) {
+        const senha1 = novaSenha.value;
+        const senha2 = novaSenha2.value;
+        
+        if (senha1 !== senha2) {
+            e.preventDefault();
+            novaSenha2.classList.add('is-invalid');
+        }
+    });
+});
+
+function togglePassword(inputId) {
+    const input = document.getElementById(inputId);
+    const button = input.nextElementSibling;
+    const icon = button.querySelector('i');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
+    }
+}
+</script>
+{% endblock %}

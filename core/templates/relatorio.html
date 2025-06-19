@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+  <div class="d-flex align-items-center mb-4">
+    <i class="bi bi-bar-chart-fill fs-2 text-primary me-2"></i>
+    <div>
+      <h2 class="mb-0">Relatório de Sessões</h2>
+      <small class="text-muted">Acompanhe o histórico de sessões, atividades e duração.</small>
+    </div>
+  </div>
+  <form class="row g-3 mb-4 align-items-end" id="filtro-form">
+    <div class="col-md-4 col-12">
+      <label class="form-label mb-1" for="inicio"><i class="bi bi-calendar-date me-1"></i>Início</label>
+      <input type="date" class="form-control" name="inicio" id="inicio" required>
+    </div>
+    <div class="col-md-4 col-12">
+      <label class="form-label mb-1" for="fim"><i class="bi bi-calendar-date me-1"></i>Fim</label>
+      <input type="date" class="form-control" name="fim" id="fim" required>
+    </div>
+    <div class="col-md-4 col-12 d-grid">
+      <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-funnel me-1"></i>Filtrar</button>
+    </div>
+  </form>
+  <div class="table-responsive rounded shadow-sm">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light sticky-top">
+      <tr>
+        <th>Funcionário</th>
+        <th>Box</th>
+        <th>Início</th>
+        <th>Fim</th>
+          <th>Status</th>
+        <th>Duração Real</th>
+          <th>Soma Estimada</th>
+        <th>Detalhes</th>
+      </tr>
+    </thead>
+    <tbody id="relatorio-tbody">
+      <!-- Preenchido via JS -->
+    </tbody>
+  </table>
+  </div>
+  <nav id="paginacao-controls" aria-label="Navegação da página" class="mt-3">
+    <ul class="pagination justify-content-center">
+      <li class="page-item" id="previous-page">
+        <a class="page-link" href="#" aria-label="Anterior">
+          <span aria-hidden="true">&laquo;</span>
+        </a>
+      </li>
+      <li class="page-item disabled"><span class="page-link" id="page-info">Página 1</span></li>
+      <li class="page-item" id="next-page">
+        <a class="page-link" href="#" aria-label="Próximo">
+          <span aria-hidden="true">&raquo;</span>
+        </a>
+      </li>
+    </ul>
+  </nav>
+  <!-- Toast container -->
+  <div id="toast-root" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+  <!-- Modal Detalhes -->
+  <div class="modal fade" id="detalhesModal" tabindex="-1" aria-labelledby="detalhesModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="detalhesModalLabel">Detalhes da Sessão</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="modal-info"></div>
+          <h6 class="mt-3">Atividades Realizadas:</h6>
+          <ul id="modal-atividades-list" class="list-group list-group-flush mb-0"></ul>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+.table thead th { position: sticky; top: 0; background: #f8f9fa; z-index: 1; }
+.table td, .table th { vertical-align: middle; }
+.status-badge { font-size: 0.95em; font-weight: 600; padding: 0.35em 0.8em; border-radius: 1em; }
+.status-finalizado { background: #e9ecef; color: #198754; }
+.status-andamento { background: #e7f1ff; color: #0d6efd; }
+@media (max-width: 600px) {
+  .table-responsive { font-size: 0.95em; }
+  .btn-lg { font-size: 1em; padding: 0.7em 1em; }
+}
+</style>
+<script>
+function showToast(message, type = 'success') {
+  const toastContainer = document.getElementById('toast-root');
+  const toast = document.createElement('div');
+  toast.className = `toast align-items-center text-white bg-${type} border-0`;
+  toast.setAttribute('role', 'alert');
+  toast.setAttribute('aria-live', 'assertive');
+  toast.setAttribute('aria-atomic', 'true');
+  toast.innerHTML = `
+      <div class="d-flex">
+          <div class="toast-body">
+              <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+              ${message}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+  `;
+  toastContainer.appendChild(toast);
+  const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+  bsToast.show();
+  toast.addEventListener('hidden.bs.toast', () => { toast.remove(); });
+  }
+</script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('filtro-form');
+    const tbody = document.getElementById('relatorio-tbody');
+  const inputInicio = document.getElementById('inicio');
+  const inputFim = document.getElementById('fim');
+    const paginacaoControls = document.getElementById('paginacao-controls');
+    const pageInfo = document.getElementById('page-info');
+    const prevPageBtn = document.getElementById('previous-page');
+    const nextPageBtn = document.getElementById('next-page');
+    let currentPage = 1;
+    let totalPages = 1;
+  // Define as datas padrão para o dia de hoje (local, não UTC)
+  function getLocalDateString() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  const hoje = getLocalDateString();
+  inputInicio.value = hoje;
+  inputFim.value = hoje;
+    // Função para buscar e renderizar o relatório
+    async function fetchRelatorio(inicio, fim, page = 1) {
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center">Carregando...</td></tr>';
+      paginacaoControls.style.display = 'none';
+      try {
+        const response = await fetch(`/api/relatorios/?inicio=${inicio}&fim=${fim}&page=${page}`);
+        if (!response.ok) {
+          const errorData = await response.json();
+        showToast(errorData.detail || 'Erro ao buscar relatório.', 'danger');
+          throw new Error(errorData.detail || 'Erro ao buscar relatório.');
+        }
+        const data = await response.json();
+        const sessoes = data.results;
+        tbody.innerHTML = '';
+        if (!sessoes || sessoes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center">Nenhuma sessão encontrada para o período.</td></tr>';
+          return;
+        }
+        sessoes.forEach(sessao => {
+          const row = document.createElement('tr');
+          let detalhesCell;
+          const atividades = sessao.atividades || [];
+          const atividadesCount = atividades.length;
+          if (atividadesCount > 0) {
+              const atividadesJson = JSON.stringify(atividades.map(a => a.atividade.nome));
+            detalhesCell = `<a href="#" class="text-primary" data-bs-toggle="modal" data-bs-target="#detalhesModal"
+                     data-atividades="${encodeURIComponent(JSON.stringify(atividades.map(a => a.atividade.nome)))}"
+                     data-info="${encodeURIComponent(JSON.stringify(sessao))}">
+                     <i class="bi bi-eye-fill fs-5"></i>
+                   </a>`;
+          } else {
+              detalhesCell = 'Nenhuma';
+          }
+          const inicioFmt = new Date(sessao.data_hora_inicio).toLocaleString('pt-BR');
+        const fimFmt = sessao.data_hora_fim ? new Date(sessao.data_hora_fim).toLocaleString('pt-BR') : '<span class="text-primary">Em andamento</span>';
+        const status = sessao.data_hora_fim
+          ? `<span class="badge bg-success">Finalizado</span>`
+          : `<span class="badge bg-primary">Em andamento</span>`;
+          row.innerHTML = `
+            <td>${sessao.funcionario.nome || '-'}</td>
+            <td>${sessao.box.nome || '-'}</td>
+            <td>${inicioFmt}</td>
+            <td>${fimFmt}</td>
+            <td>${status}</td>
+            <td>${sessao.duracao_real || 'N/A'}</td>
+            <td>${sessao.soma_estimada_min || 'N/A'} min</td>
+            <td>${detalhesCell}</td>
+          `;
+          tbody.appendChild(row);
+        });
+        // Atualiza controles de paginação
+        currentPage = page;
+        totalPages = Math.ceil(data.count / 10); // Assumindo page_size=10
+        pageInfo.textContent = `Página ${currentPage} de ${totalPages}`;
+        paginacaoControls.style.display = 'block';
+        prevPageBtn.classList.toggle('disabled', !data.previous);
+        nextPageBtn.classList.toggle('disabled', !data.next);
+      } catch (error) {
+      tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">${error.message}</td></tr>`;
+      }
+    }
+    prevPageBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (currentPage > 1) {
+            fetchRelatorio(inputInicio.value, inputFim.value, currentPage - 1);
+        }
+    });
+    nextPageBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (currentPage < totalPages) {
+            fetchRelatorio(inputInicio.value, inputFim.value, currentPage + 1);
+        }
+    });
+    // Event listener para o formulário
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const inicio = inputInicio.value;
+      const fim = inputFim.value;
+      if (inicio && fim) {
+      fetchRelatorio(inicio, fim, 1);
+      }
+    });
+  // Carrega relatório inicial
+  fetchRelatorio(inputInicio.value, inputFim.value, 1);
+  // Modal detalhes
+  const detalhesModal = document.getElementById('detalhesModal');
+  if (detalhesModal) {
+    detalhesModal.addEventListener('show.bs.modal', function (event) {
+      const button = event.relatedTarget;
+      // Limpa o conteúdo do modal
+      const modalList = document.getElementById('modal-atividades-list');
+      const modalInfo = document.getElementById('modal-info');
+      modalList.innerHTML = '';
+      modalInfo.innerHTML = '';
+      // Decodifica e parseia os dados
+      const atividades = JSON.parse(decodeURIComponent(button.getAttribute('data-atividades')));
+      const info = JSON.parse(decodeURIComponent(button.getAttribute('data-info')));
+      if (atividades && atividades.length > 0) {
+        atividades.forEach(nomeAtividade => {
+          const listItem = document.createElement('li');
+          listItem.className = 'list-group-item';
+          listItem.textContent = nomeAtividade;
+          modalList.appendChild(listItem);
+        });
+      } else {
+        const listItem = document.createElement('li');
+        listItem.className = 'list-group-item text-muted';
+        listItem.textContent = 'Nenhuma atividade registrada para esta sessão.';
+        modalList.appendChild(listItem);
+      }
+      // Info extra
+      modalInfo.innerHTML = `
+        <div class="mb-2"><strong>Funcionário:</strong> ${info.funcionario.nome}</div>
+        <div class="mb-2"><strong>Box:</strong> ${info.box.nome}</div>
+        <div class="mb-2"><strong>Início:</strong> ${new Date(info.data_hora_inicio).toLocaleString('pt-BR')}</div>
+        <div class="mb-2"><strong>Fim:</strong> ${info.data_hora_fim ? new Date(info.data_hora_fim).toLocaleString('pt-BR') : '<span class="text-primary">Em andamento</span>'}</div>
+        <div class="mb-2"><strong>Duração Real:</strong> ${info.duracao_real || 'N/A'}</div>
+        <div class="mb-2"><strong>Soma Estimada:</strong> ${info.soma_estimada_min || 'N/A'} min</div>
+      `;
+    });
+  }
+  });
+</script>
+{% endblock %}
