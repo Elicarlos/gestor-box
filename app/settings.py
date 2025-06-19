@@ -30,7 +30,11 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'chave-padrao-insegura')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+default_hosts = 'localhost,127.0.0.1,testserver'
+env_hosts = os.getenv('ALLOWED_HOSTS', default_hosts)
+if 'testserver' not in env_hosts:
+    env_hosts += ',testserver'
+ALLOWED_HOSTS = env_hosts.split(',')
 
 
 # Application definition
