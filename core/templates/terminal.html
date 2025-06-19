@@ -323,11 +323,27 @@
 
 {% block scripts %}
 <script>
+
+ const appState = {
+        funcionario: null,
+        jwtToken: localStorage.getItem('jwtToken') || null,
+        refreshToken: localStorage.getItem('refreshToken') || null,
+        boxId: null,
+        sessaoId: null,
+        sessionTimer: null,
+        startTime: null,
+        inicioFormatado: '',
+        currentMatricula: null,
+        totalSessionEstimatedDuration: 0
+    };
+
 if (!localStorage.getItem('jwtToken')) {
     if (window.location.pathname !== '/terminal/') {
         window.location.href = '/terminal/';
     }
 }
+
+
 
 document.addEventListener('DOMContentLoaded', async function() {
     console.log("DOMContentLoaded started.");
@@ -373,17 +389,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const sessionEndTimeDisplay = document.getElementById('session-end-time');
     const sessionActivitiesList = document.getElementById('session-activities-list');
 
-    // --- ESTADO ---
-    let funcionario = null;
-    let jwtToken = localStorage.getItem('jwtToken') || null;
-    let refreshToken = localStorage.getItem('refreshToken') || null;
-    let boxId = null;
-    let sessaoId = null;
-    let sessionTimer;
-    let startTime;
-    let inicioFormatado = '';
-    let currentMatricula = null; // Variável para armazenar a matrícula
-    let totalSessionEstimatedDuration = 0; // Global variable for total duration
+   
 
     // --- FUNÇÕES DE UI ---
     function showLoading() {
@@ -440,9 +446,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             localStorage.removeItem('jwtToken');
             localStorage.removeItem('refreshToken');
             localStorage.removeItem('funcionario');
-            funcionario = null;
-            jwtToken = null;
-            refreshToken = null;
+            appState.funcionario = null;
+            appState.jwtToken = null;
+            appState.refreshToken = null;
             console.log("showLoginView() chamado");
             resetProgressBar();
         }
@@ -455,9 +461,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             console.log("showAppView(): appView display set to block.");
             // Atualiza o nome do usuário na navbar principal do base.html
             const navbarUserSpan = document.querySelector('#navbarNav .dropdown-toggle span');
-            if (funcionario && navbarUserSpan) {
-                navbarUserSpan.textContent = funcionario.nome_completo;
-                console.log("showAppView(): Welcome message updated for: ", funcionario.nome_completo);
+            if (appState.funcionario && navbarUserSpan) {
+                navbarUserSpan.textContent = appState.funcionario.nome_completo;
+                console.log("showAppView(): Welcome message updated for: ", appState.funcionario.nome_completo);
             }
             console.log("showAppView() chamado");
         }
@@ -469,7 +475,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             // sessao-ativa-controls should be hidden when starting new session
             sessaoAtivaControls.style.display = 'none';
             console.log("showStateIniciar(): estadoIniciar display set to block, sessaoAtivaControls hidden.");
-            console.log("showStateIniciar(): boxId when called:", boxId); // Log the boxId here
+            console.log("showStateIniciar(): boxId when called:", appState.boxId); // Log the boxId here
 
             if (atividadesTitle) atividadesTitle.textContent = 'Selecione as atividades para iniciar:';
             if (iniciarBtn) iniciarBtn.style.display = 'inline-block';
@@ -478,7 +484,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (atividadesFormIniciar) atividadesFormIniciar.reset();
             
             if (selectedBoxId) {
-                boxId = selectedBoxId;
+                appState.boxId = selectedBoxId;
                 selectBox.value = selectedBoxId; // Restore selected box
             }
 
@@ -495,23 +501,23 @@ document.addEventListener('DOMContentLoaded', async function() {
             sessaoAtivaControls.style.display = 'block';
             console.log("showStateActiveSession(): estadoIniciar hidden, sessaoAtivaControls display set to block.");
 
-            sessaoId = sessionData.id;
+            appState.sessaoId = sessionData.id;
             // Preserva o boxId existente se não houver um novo
             if (sessionData.box_id) {
-                boxId = sessionData.box_id;
+                appState.boxId = sessionData.box_id;
                 selectBox.value = sessionData.box_id; // Keep box selected in dropdown
             }
-            console.log("showStateActiveSession(): boxId atualizado:", boxId);
+            console.log("showStateActiveSession(): boxId atualizado:", appState.boxId);
 
             const resumoFuncionario = document.getElementById('resumo-funcionario');
             const resumoBox = document.getElementById('resumo-box');
             let boxNome = sessionData.box_nome || (sessionData.box && sessionData.box.nome) || 'N/A';
-            if (resumoFuncionario && funcionario) resumoFuncionario.textContent = funcionario.nome_completo || 'N/A';
+            if (resumoFuncionario && appState.funcionario) resumoFuncionario.textContent = appState.funcionario.nome_completo || 'N/A';
             if (resumoBox) resumoBox.textContent = boxNome;
-            console.log("showStateActiveSession(): Updated funcionario and box resume.", {funcionario: funcionario ? funcionario.nome_completo : 'N/A', box: boxNome});
+            console.log("showStateActiveSession(): Updated funcionario and box resume.", {funcionario: appState.funcionario ? appState.funcionario.nome_completo : 'N/A', box: boxNome});
 
-            startTime = new Date(sessionData.data_hora_inicio);
-            totalSessionEstimatedDuration = sessionData.atividades.reduce((sum, activity) => sum + activity.atividade.duracao_estimada, 0);
+            appState.startTime = new Date(sessionData.data_hora_inicio);
+            appState.totalSessionEstimatedDuration = sessionData.atividades.reduce((sum, activity) => sum + activity.atividade.duracao_estimada, 0);
             // Exibe botões de controle da sessão
             if (adicionarAtividadesBtn) adicionarAtividadesBtn.style.display = 'inline-block';
             if (finalizarSessaoBtn) finalizarSessaoBtn.style.display = 'inline-block';
@@ -531,9 +537,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                     : 'N/A';
             }
             if (sessionEndTimeDisplay) {
-                if (sessionData.data_hora_inicio && totalSessionEstimatedDuration > 0) {
+                if (sessionData.data_hora_inicio && appState.totalSessionEstimatedDuration > 0) {
                     const inicio = new Date(sessionData.data_hora_inicio);
-                    const estimativaFim = new Date(inicio.getTime() + totalSessionEstimatedDuration * 60 * 1000);
+                    const estimativaFim = new Date(inicio.getTime() + appState.totalSessionEstimatedDuration * 60 * 1000);
                     sessionEndTimeDisplay.textContent = estimativaFim.toLocaleTimeString('pt-BR');
                 } else {
                     sessionEndTimeDisplay.textContent = 'N/A';
@@ -547,18 +553,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function showAdicionarAtividades() {
-        if (sessaoAtivaControls && atividadesFormAdicionar) {
-            // Exibe o bloco de controles da sessão ativa e o formulário de adicionar atividades
-            sessaoAtivaControls.style.display = 'block';
+        if (atividadesFormAdicionar) {
             atividadesFormAdicionar.style.display = 'block';
-            // Oculta o botão de adicionar e o de finalizar sessão, se necessário
-            if (adicionarTriggerBtn) adicionarTriggerBtn.style.display = 'none';
+            adicionarTriggerBtn.style.display = 'none';
             if (finalizarSessaoBtn) finalizarSessaoBtn.style.display = 'none';
-            // Carrega as atividades
             loadActivitiesForAdding();
+            // Foco no primeiro checkbox após renderizar
+            setTimeout(() => {
+                const firstCheckbox = atividadesListAdicionar.querySelector('input[type="checkbox"]');
+                if (firstCheckbox) firstCheckbox.focus();
+            }, 100);
         }
-        // Oculte o bloco de iniciar sessão
-        if (estadoIniciar) estadoIniciar.style.display = 'none';
     }
 
     function resetProgressBar() {
@@ -584,7 +589,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (sessionEndTimeDisplay) {
             sessionEndTimeDisplay.textContent = 'N/A';
         }
-        totalSessionEstimatedDuration = 0; // Reset estimated duration
+        appState.totalSessionEstimatedDuration = 0; // Reset estimated duration
     }
 
     // --- FUNÇÕES DE LÓGICA DE NEGÓCIO ---
@@ -609,8 +614,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                     // Se houver apenas um box, selecionar automaticamente
                     if (boxes.length === 1) {
                         selectBox.selectedIndex = 1; // 0 é o placeholder
-                        boxId = boxes[0].id;
-                        console.log('[LOG] Apenas um box disponível. Selecionado automaticamente:', boxId);
+                        appState.boxId = boxes[0].id;
+                        console.log('[LOG] Apenas um box disponível. Selecionado automaticamente:', appState.boxId);
                     }
                 } else {
                     console.log('[LOG] Nenhuma box retornada pela API ou array de boxes vazio.');
@@ -685,7 +690,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     async function loadActivitiesForInitiation() {
         showLoading();
-        if (!boxId) {
+        if (!appState.boxId) {
             console.warn('Box ID is not selected. Cannot load activities for initiation.');
             showToast('Selecione um box para ver as atividades disponíveis.', 'info');
             if (atividadesIniciarList) atividadesIniciarList.innerHTML = ''; // Clear activities if no box
@@ -726,71 +731,48 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     async function loadActivitiesForAdding() {
         showLoading();
-        // Garante que boxId está definido
-        if (!boxId && selectBox && selectBox.value) {
-            boxId = selectBox.value;
-            console.log('[LOG] boxId recuperado do selectBox em loadActivitiesForAdding:', boxId);
-        }
-        
-        if (!boxId) {
-            console.warn('[LOG] Box ID is not selected. Cannot load activities for adding.');
-            showToast('Selecione um box para adicionar atividades.', 'info');
-            if (atividadesListAdicionar) atividadesListAdicionar.innerHTML = ''; // Clear activities if no box
-            hideLoading();
-            return;
-        }
-
         try {
-            console.log('[LOG] Carregando atividades para adicionar. boxId:', boxId);
             const allActivities = await fetchAPI('/api/boxes/atividades-disponiveis/', {method: 'GET'});
-            console.log('[LOG] Todas as atividades disponíveis:', allActivities);
-
-            let currentSessionActivities = [];
-            if (sessaoId) {
-                const sessionDataResponse = await fetchAPI(`/api/verificar-sessao/`, {method: 'GET'});
-                if (sessionDataResponse && sessionDataResponse.active_session) {
-                    currentSessionActivities = sessionDataResponse.active_session.atividades.map(a => a.id);
+            let currentIds = [];
+            if (appState.sessaoId) {
+                const sessionData = await fetchAPI('/api/verificar-sessao/', {method: 'GET'});
+                if (sessionData && sessionData.active_session) {
+                    currentIds = sessionData.active_session.atividades.map(a => a.id);
                 }
             }
-            console.log('[LOG] Atividades na sessão atual (IDs):', currentSessionActivities);
-
-            if (atividadesListAdicionar) {
-                atividadesListAdicionar.innerHTML = '';
-                const filteredActivities = allActivities.filter(activity => 
-                    !currentSessionActivities.includes(activity.id)
-                );
-                console.log('[LOG] Atividades filtradas para adicionar:', filteredActivities);
-
-                if (filteredActivities.length > 0) {
-                    filteredActivities.forEach(atividade => {
-                        const li = document.createElement('li');
-                        li.className = 'list-group-item d-flex justify-content-between align-items-center';
-                        li.innerHTML = `
-                            <span><input type="checkbox" value="${atividade.id}" class="form-check-input me-2"> ${atividade.nome}</span>
-                            <span class="badge bg-primary rounded-pill">${atividade.duracao_estimada} min</span>
-                        `;
-                        atividadesListAdicionar.appendChild(li);
-                    });
-                    console.log('[LOG] <ul id="atividades-adicionar-list"> preenchido:', atividadesListAdicionar.innerHTML);
-                } else {
-                    atividadesListAdicionar.innerHTML = '<li class="list-group-item text-muted">Nenhuma atividade para adicionar.</li>';
-                    console.log('[LOG] Nenhuma atividade para adicionar.');
-                }
+            const available = allActivities.filter(a => !currentIds.includes(a.id));
+            atividadesListAdicionar.innerHTML = '';
+            if (available.length === 0) {
+                atividadesListAdicionar.innerHTML = '<li class="list-group-item text-muted">Nenhuma atividade disponível para adicionar.</li>';
             } else {
-                console.warn('[LOG] Activities list for adding (atividades-adicionar-list) element not found.');
+                available.forEach(a => {
+                    atividadesListAdicionar.innerHTML += `
+                      <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><input type="checkbox" value="${a.id}" class="form-check-input me-2"> ${a.nome}</span>
+                        <span class="badge bg-primary rounded-pill">${a.duracao_estimada} min</span>
+                      </li>`;
+                });
             }
-        } catch (error) {
-            showToast('Erro ao carregar atividades para adicionar: ' + error.message, 'danger');
-            console.error('[LOG] Erro ao carregar atividades para adicionar:', error);
+        } catch (e) {
+            showToast('Erro ao carregar atividades: ' + e.message, 'danger');
         } finally {
             hideLoading();
         }
     }
 
     function renderSessionActivities(activities) {
+        console.log('[LOG] Atualizando lista de atividades da sessão:', activities);
         if (sessionActivitiesList) {
             sessionActivitiesList.innerHTML = '';
             if (activities && activities.length > 0) {
+                // Se houver mais de 3 atividades, torne a lista scrollável
+                if (activities.length > 3) {
+                    sessionActivitiesList.style.maxHeight = '180px';
+                    sessionActivitiesList.style.overflowY = 'auto';
+                } else {
+                    sessionActivitiesList.style.maxHeight = '';
+                    sessionActivitiesList.style.overflowY = '';
+                }
                 activities.forEach(activity => {
                     const li = document.createElement('li');
                     li.className = 'list-group-item d-flex justify-content-between align-items-center';
@@ -802,53 +784,86 @@ document.addEventListener('DOMContentLoaded', async function() {
                 });
             } else {
                 sessionActivitiesList.innerHTML = '<li class="list-group-item text-muted">Nenhuma atividade na sessão.</li>';
+                sessionActivitiesList.style.maxHeight = '';
+                sessionActivitiesList.style.overflowY = '';
             }
         } else {
             console.warn('Session activities list (session-activities-list) element not found.');
         }
+        // Atualiza barra de progresso e tempo total
+        atualizarBarraDeProgresso(activities);
+    }
+
+    // Função para atualizar barra de progresso e tempo total
+    function atualizarBarraDeProgresso(activities) {
+        let totalDuration = 0;
+        if (activities && activities.length > 0) {
+            totalDuration = activities.reduce((sum, activity) => sum + (activity.atividade.duracao_estimada || 0), 0);
+        }
+        appState.totalSessionEstimatedDuration = totalDuration;
+        if (sessionProgressBar && sessionProgressText) {
+            const elapsed = getElapsedTime();
+            let percent = totalDuration ? Math.round((elapsed / (totalDuration * 60)) * 100) : 0;
+            if (percent > 100) percent = 100;
+            sessionProgressBar.style.width = percent + '%';
+            sessionProgressText.textContent = percent + '%';
+            // Se passou do tempo, mude a cor
+            if (elapsed > totalDuration * 60) {
+                sessionProgressBar.classList.add('bg-danger');
+            } else {
+                sessionProgressBar.classList.remove('bg-danger');
+            }
+        }
+        if (sessionRemainingTime) {
+            const elapsed = getElapsedTime();
+            const remaining = Math.max(0, (totalDuration * 60) - elapsed);
+            sessionRemainingTime.textContent = formatTime(remaining * 1000);
+        }
+        if (sessionEndTimeDisplay && appState.startTime) {
+            const end = new Date(appState.startTime.getTime() + totalDuration * 60000);
+            sessionEndTimeDisplay.textContent = end.toLocaleTimeString('pt-BR');
+        }
+        // Badge visual de atraso
+        const statusBadge = document.getElementById('status-sessao');
+        if (statusBadge) {
+            if (getElapsedTime() > totalDuration * 60 && totalDuration > 0) {
+                statusBadge.textContent = 'Atrasado';
+                statusBadge.classList.remove('bg-success');
+                statusBadge.classList.add('bg-danger');
+            } else {
+                statusBadge.textContent = 'Em andamento';
+                statusBadge.classList.remove('bg-danger');
+                statusBadge.classList.add('bg-success');
+            }
+        }
     }
 
     async function checkLoginStatus() {
-        console.log("checkLoginStatus() started. boxId at start:", boxId);
-        console.log("Verificando status de login...");
         showLoading();
         try {
             const token = localStorage.getItem('jwtToken');
             const storedFuncionario = localStorage.getItem('funcionario');
-
             if (token && storedFuncionario) {
-                funcionario = JSON.parse(storedFuncionario);
-                console.log("Token e funcionário encontrados no localStorage. Tentando verificar sessão...");
-                
+                appState.funcionario = JSON.parse(storedFuncionario);
                 const data = await fetchAPI('/api/verificar-sessao/', {method: 'GET'});
                 if (data && data.user) {
-                    console.log("Sessão verificada com sucesso. Dados do usuário:", data.user);
-                    funcionario = data.user;
-                    localStorage.setItem('funcionario', JSON.stringify(funcionario));
+                    appState.funcionario = data.user;
+                    localStorage.setItem('funcionario', JSON.stringify(appState.funcionario));
                     showAppView();
-                    
                     if (data.active_session) {
-                        console.log("Sessão ativa encontrada. Sessão ID:", data.active_session.id);
                         showStateActiveSession(data.active_session);
                     } else {
-                        console.log("Nenhuma sessão ativa encontrada. Exibindo estado de iniciar nova sessão.");
-                        showStateIniciar(boxId); // Pass currentBoxId to retain selection
+                        showStateIniciar(appState.boxId);
                     }
-                } else {
-                    console.log("Verificação de sessão falhou ou não retornou dados do usuário. Exibindo login view.");
-                    showLoginView();
+                    return;
                 }
-            } else {
-                console.log("Token ou funcionário não encontrados no localStorage. Exibindo login view.");
-                showLoginView();
             }
-        } catch (error) {
-            console.error('Erro ao verificar status de login:', error);
-            showToast('Erro ao verificar sessão: ' + error.message, 'danger');
             showLoginView();
+        } catch (error) {
+            showToast('Erro ao verificar sessão: ' + error.message, 'danger');
+            // Não mostra login aqui, só feedback
         } finally {
             hideLoading();
-            console.log("checkLoginStatus() finished.");
         }
     }
 
@@ -866,37 +881,37 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function startSessionTimer() {
-        if (sessionTimer) {
-            clearInterval(sessionTimer);
+        if (appState.sessionTimer) {
+            clearInterval(appState.sessionTimer);
         }
 
         const timerDisplay = document.querySelector('.timer-display');
         const infoInicioSessao = document.getElementById('info-inicio-sessao');
 
-        if (!startTime) {
+        if (!appState.startTime) {
             console.error("startTime não definido para o cronômetro da sessão.");
             return;
         }
 
-        sessionTimer = setInterval(() => {
+        appState.sessionTimer = setInterval(() => {
             const currentTime = new Date();
-            const elapsedTime = currentTime - startTime;
-            let remainingTime = totalSessionEstimatedDuration * 60 * 1000 - elapsedTime;
+            const elapsedTime = currentTime - appState.startTime;
+            let remainingTime = appState.totalSessionEstimatedDuration * 60 * 1000 - elapsedTime;
 
             if (remainingTime <= 0) {
-                clearInterval(sessionTimer);
-                sessionTimer = null;
+                clearInterval(appState.sessionTimer);
+                appState.sessionTimer = null;
                 remainingTime = 0;
             }
 
             const formattedTime = formatTime(remainingTime);
             timerDisplay.textContent = formattedTime;
-            infoInicioSessao.textContent = `Início: ${new Date(startTime).toLocaleTimeString()}`;
+            infoInicioSessao.textContent = `Início: ${new Date(appState.startTime).toLocaleTimeString()}`;
 
             if (sessionProgressBarContainer) {
                 let progressPercentage = 0;
-                if (totalSessionEstimatedDuration > 0) {
-                    progressPercentage = Math.max(0, Math.min(100, Math.round((elapsedTime / (totalSessionEstimatedDuration * 60 * 1000)) * 100)));
+                if (appState.totalSessionEstimatedDuration > 0) {
+                    progressPercentage = Math.max(0, Math.min(100, Math.round((elapsedTime / (appState.totalSessionEstimatedDuration * 60 * 1000)) * 100)));
                 }
                 sessionProgressBar.style.width = `${progressPercentage}%`;
                 sessionProgressBar.setAttribute('aria-valuenow', progressPercentage);
@@ -921,7 +936,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             showToast('Por favor, digite sua matrícula', 'warning');
             return;
         }
-        if (!boxId) {
+        if (!appState.boxId) {
             console.log('[LOG] Box não selecionado');
             showToast('Por favor, selecione um box', 'warning');
             return;
@@ -933,8 +948,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             const data = await response.json();
             console.log('[LOG] Resposta da API (funcionarios):', data);
             if (response.ok && Array.isArray(data) && data.length > 0) {
-                currentMatricula = matricula;
-                funcionario = data[0];
+                appState.currentMatricula = matricula;
+                appState.funcionario = data[0];
                 console.log('[LOG] Matrícula encontrada, mostrando modal de senha');
                 if (senhaModal) {
                     senhaModal.show();
@@ -971,7 +986,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ 
-                    matricula: currentMatricula,
+                    matricula: appState.currentMatricula,
                     senha: senha
                 })
             });
@@ -982,9 +997,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                 localStorage.setItem('jwtToken', data.access);
                 localStorage.setItem('refreshToken', data.refresh);
                 localStorage.setItem('funcionario', JSON.stringify(data.user));
-                funcionario = data.user;
-                jwtToken = data.access;
-                refreshToken = data.refresh;
+                appState.funcionario = data.user;
+                appState.jwtToken = data.access;
+                appState.refreshToken = data.refresh;
                 // Atualiza o nome do usuário na navbar principal
                 const navbarUserSpan = document.querySelector('#navbarNav .dropdown-toggle span');
                 if (navbarUserSpan) {
@@ -994,7 +1009,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     senhaModal.hide();
                 }
                 showAppView();
-                showStateIniciar(boxId);
+                showStateIniciar(appState.boxId);
                 atualizarNavbarUsuario();
             } else {
                 console.log('[LOG] Erro na autenticação:', data.detail);
@@ -1023,11 +1038,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (atividadesFormIniciar) {
         atividadesFormIniciar.addEventListener('submit', async function(e) {
             e.preventDefault();
-            if (!boxId) {
+            if (!appState.boxId) {
                 showToast('Selecione um box.', 'danger');
                 return;
             }
-            // Coletar IDs das atividades selecionadas
             const checkboxes = atividadesFormIniciar.querySelectorAll('input[type="checkbox"]:checked');
             const atividades = Array.from(checkboxes).map(cb => parseInt(cb.value));
             if (atividades.length === 0) {
@@ -1036,11 +1050,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
             showLoading();
             try {
-                const response = await fetch(`/api/boxes/${boxId}/sessao-servico/iniciar/`, {
+                const response = await fetch(`/api/boxes/${appState.boxId}/sessao-servico/iniciar/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${jwtToken}`
+                        'Authorization': `Bearer ${appState.jwtToken}`
                     },
                     body: JSON.stringify({ atividades })
                 });
@@ -1048,6 +1062,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (response.ok) {
                     showToast('Sessão iniciada com sucesso!', 'success');
                     showStateActiveSession(data);
+                } else if (response.status === 409) {
+                    showToast('Já existe uma sessão ativa neste box. Redirecionando...', 'warning');
+                    await checkLoginStatus();
                 } else {
                     showToast(data.detail || 'Erro ao iniciar sessão.', 'danger');
                 }
@@ -1061,24 +1078,24 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     if (finalizarSessaoBtn) {
         finalizarSessaoBtn.addEventListener('click', async function() {
-            if (!sessaoId || !boxId) {
+            if (!appState.sessaoId || !appState.boxId) {
                 showToast('Sessão ou box não encontrados.', 'danger');
                 return;
             }
             showLoading();
             try {
-                const response = await fetch(`/api/boxes/${boxId}/sessao-servico/finalizar/`, {
+                const response = await fetch(`/api/boxes/${appState.boxId}/sessao-servico/finalizar/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${jwtToken}`
+                        'Authorization': `Bearer ${appState.jwtToken}`
                     },
-                    body: JSON.stringify({ sessao_id: sessaoId })
+                    body: JSON.stringify({ sessao_id: appState.sessaoId })
                 });
                 const data = await response.json();
                 if (response.ok) {
                     showToast('Sessão finalizada com sucesso!', 'success');
-                    showStateIniciar(boxId);
+                    showStateIniciar(appState.boxId);
                 } else {
                     showToast(data.detail || 'Erro ao finalizar sessão.', 'danger');
                 }
@@ -1094,9 +1111,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         adicionarTriggerBtn.addEventListener('click', async function() {
             console.log('[LOG] Clique no botão Adicionar Atividade');
             // Garante que boxId está definido
-            if (!boxId && selectBox && selectBox.value) {
-                boxId = selectBox.value;
-                console.log('[LOG] boxId recuperado do selectBox:', boxId);
+            if (!appState.boxId && selectBox && selectBox.value) {
+                appState.boxId = selectBox.value;
+                console.log('[LOG] boxId recuperado do selectBox:', appState.boxId);
             }
             // Exibir o mesmo bloco de seleção de atividades usado para iniciar sessão
             if (estadoIniciar && sessaoAtivaControls) {
@@ -1113,7 +1130,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 atividadesFormIniciar.onsubmit = async function(e) {
                     e.preventDefault();
                     // Verifica se boxId está definido
-                    if (!boxId) {
+                    if (!appState.boxId) {
                         console.log('[LOG] boxId não definido no submit');
                         showToast('Erro: Box não selecionado.', 'danger');
                         return;
@@ -1127,12 +1144,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                     }
                     showLoading();
                     try {
-                        console.log('[LOG] Enviando POST para adicionar atividades. boxId:', boxId);
-                        const response = await fetch(`/api/boxes/${boxId}/sessao-servico/adicionar-atividades/`, {
+                        console.log('[LOG] Enviando POST para adicionar atividades. boxId:', appState.boxId);
+                        const response = await fetch(`/api/boxes/${appState.boxId}/sessao-servico/adicionar-atividades/`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${jwtToken}`
+                                'Authorization': `Bearer ${appState.jwtToken}`
                             },
                             body: JSON.stringify({ atividades })
                         });
@@ -1166,11 +1183,54 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Habilita o botão só se houver seleção
     if (atividadesFormAdicionar) {
-        atividadesFormAdicionar.addEventListener('change', function() {
-            const checkboxes = atividadesFormAdicionar.querySelectorAll('input[type="checkbox"]:checked');
+        atividadesFormAdicionar.addEventListener('change', () => {
+            const checked = atividadesFormAdicionar.querySelectorAll('input[type="checkbox"]:checked');
             const btnConfirmar = document.getElementById('btn-confirmar-adicao');
-            if (btnConfirmar) btnConfirmar.disabled = checkboxes.length === 0;
+            if (btnConfirmar) btnConfirmar.disabled = checked.length === 0;
         });
+    }
+
+    // Submit do formulário
+    if (atividadesFormAdicionar) {
+        atividadesFormAdicionar.onsubmit = async function(e) {
+            e.preventDefault();
+            const atividades = Array.from(atividadesFormAdicionar.querySelectorAll('input[type="checkbox"]:checked')).map(cb => parseInt(cb.value));
+            if (atividades.length === 0) return;
+            showLoading();
+            const btnConfirmar = document.getElementById('btn-confirmar-adicao');
+            if (btnConfirmar) btnConfirmar.disabled = true;
+            try {
+                const resp = await fetch(`/api/boxes/${appState.boxId}/sessao-servico/adicionar-atividades/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${appState.jwtToken}` },
+                    body: JSON.stringify({ atividades })
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    showToast('Atividades adicionadas com sucesso!', 'success');
+                    atividadesFormAdicionar.style.display = 'none';
+                    adicionarTriggerBtn.style.display = 'block';
+                    if (finalizarSessaoBtn) finalizarSessaoBtn.style.display = 'block';
+                    await atualizarSessaoEUI();
+                } else {
+                    showToast(data.detail || 'Erro ao adicionar atividades.', 'danger');
+                }
+            } catch (err) {
+                showToast('Erro ao adicionar atividades: ' + err.message, 'danger');
+            } finally {
+                if (btnConfirmar) btnConfirmar.disabled = false;
+                hideLoading();
+            }
+        };
+    }
+
+    // Cancelar
+    if (cancelarAdicionarBtn) {
+        cancelarAdicionarBtn.onclick = () => {
+            atividadesFormAdicionar.style.display = 'none';
+            adicionarTriggerBtn.style.display = 'block';
+            if (finalizarSessaoBtn) finalizarSessaoBtn.style.display = 'block';
+        };
     }
 
     // --- INITIALIZATION ---
@@ -1205,10 +1265,12 @@ async function atualizarSessaoEUI() {
     // 2. Verificar se ainda há atividades para adicionar
     const atividadesDisponiveis = await fetchAPI('/api/boxes/atividades-disponiveis/', {method: 'GET'});
     const btnAdicionar = document.getElementById('adicionarAtividadesBtn');
-    if (atividadesDisponiveis.length === 0 && btnAdicionar) {
-        btnAdicionar.style.display = 'none';
-    } else if (btnAdicionar) {
-        btnAdicionar.style.display = 'block';
+    if (btnAdicionar) {
+        if (atividadesDisponiveis.length === 0) {
+            btnAdicionar.style.display = 'none';
+        } else {
+            btnAdicionar.style.display = 'block';
+        }
     }
     // Esconde o formulário de adicionar atividades, se estiver aberto
     if (atividadesFormAdicionar) atividadesFormAdicionar.style.display = 'none';
@@ -1226,6 +1288,64 @@ function atualizarNavbarUsuario() {
     } else if (navbarUserBlock) {
         navbarUserBlock.style.display = 'none';
     }
+}
+
+// Expor funções para testes manuais no window
+window.testFinalizarSessao = async function() {
+    if (!appState.sessaoId || !appState.boxId) { showToast('Sessão ou box não encontrados.', 'danger'); return; }
+    showLoading();
+    try {
+        const response = await fetch(`/api/boxes/${appState.boxId}/sessao-servico/finalizar/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${appState.jwtToken}`
+            },
+            body: JSON.stringify({ sessao_id: appState.sessaoId })
+        });
+        const data = await response.json();
+        if (response.ok) {
+            showToast('Sessão finalizada com sucesso!', 'success');
+            showStateIniciar(appState.boxId);
+        } else {
+            showToast(data.detail || 'Erro ao finalizar sessão.', 'danger');
+        }
+    } catch (error) {
+        showToast('Erro ao finalizar sessão: ' + error.message, 'danger');
+    } finally {
+        hideLoading();
+    }
+};
+window.testAdicionarAtividade = async function(atividadeId) {
+    if (!appState.sessaoId || !appState.boxId) { showToast('Sessão ou box não encontrados.', 'danger'); return; }
+    showLoading();
+    try {
+        const response = await fetch(`/api/boxes/${appState.boxId}/sessao-servico/adicionar-atividades/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${appState.jwtToken}`
+            },
+            body: JSON.stringify({ atividades: [atividadeId] })
+        });
+        const data = await response.json();
+        if (response.ok) {
+            showToast('Atividade adicionada com sucesso!', 'success');
+            await atualizarSessaoEUI();
+        } else {
+            showToast(data.detail || 'Erro ao adicionar atividade.', 'danger');
+        }
+    } catch (error) {
+        showToast('Erro ao adicionar atividade: ' + error.message, 'danger');
+    } finally {
+        hideLoading();
+    }
+};
+
+// Função utilitária para calcular o tempo decorrido desde o início da sessão
+function getElapsedTime() {
+    if (!appState.startTime) return 0;
+    return Math.floor((Date.now() - appState.startTime.getTime()) / 1000); // segundos
 }
 </script>
 {% endblock %}
