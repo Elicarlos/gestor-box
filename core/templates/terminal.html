@@ -173,10 +173,12 @@
                     </form>
 
                     <!-- Formulário de iniciar sessão -->
+                    <!-- REMOVER O BLOCO ABAIXO
                     <form id="atividades-form-iniciar">
                         <ul id="atividades-iniciar-list" class="list-group list-group-flush mb-3"></ul>
                         <button type="submit" id="iniciar-btn" class="btn btn-success btn-lg w-100" style="display:none;">Iniciar Sessão</button>
                     </form>
+                    -->
                 </div>
             </div>
 
@@ -1143,46 +1145,44 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     // Submit do formulário
-    if (atividadesFormAdicionar) {
-        atividadesFormAdicionar.onsubmit = async function(e) {
+    if (atividadesFormIniciar) {
+        atividadesFormIniciar.addEventListener('submit', async function(e) {
             e.preventDefault();
-            const atividades = Array.from(atividadesFormAdicionar.querySelectorAll('input[type="checkbox"]:checked')).map(cb => parseInt(cb.value));
-            if (atividades.length === 0) return;
+            const checkboxes = atividadesFormIniciar.querySelectorAll('input[type="checkbox"]:checked');
+            const atividades = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            console.log('[LOG CABRA] Atividades selecionadas para iniciar sessão:', atividades);
+            if (atividades.length === 0) {
+                showToast('Selecione pelo menos uma atividade.', 'danger');
+                return;
+            }
             showLoading();
-            const btnConfirmar = document.getElementById('btn-confirmar-adicao');
-            if (btnConfirmar) btnConfirmar.disabled = true;
             try {
-                const resp = await fetch(`/api/boxes/${appState.boxId}/sessao-servico/adicionar-atividades/`, {
+                const response = await fetch(`/api/boxes/${appState.boxId}/sessao-servico/iniciar/`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${appState.jwtToken}` },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${appState.jwtToken}`
+                    },
                     body: JSON.stringify({ atividades })
                 });
-                const data = await resp.json();
-                if (resp.ok) {
-                    showToast('Atividades adicionadas com sucesso!', 'success');
-                    atividadesFormAdicionar.style.display = 'none';
-                    adicionarTriggerBtn.style.display = 'block';
-                    if (finalizarSessaoBtn) finalizarSessaoBtn.style.display = 'block';
-                    await atualizarSessaoEUI();
+                const data = await response.json();
+                console.log('[LOG CABRA] Resposta da API ao iniciar sessão:', data);
+                if (response.ok) {
+                    showToast('Sessão iniciada com sucesso!', 'success');
+                    showStateActiveSession(data);
+                } else if (response.status === 409) {
+                    showToast('Já existe uma sessão ativa neste box. Redirecionando...', 'warning');
+                    await checkLoginStatus();
                 } else {
-                    showToast(data.detail || 'Erro ao adicionar atividades.', 'danger');
+                    showToast(data.detail || 'Erro ao iniciar sessão.', 'danger');
                 }
-            } catch (err) {
-                showToast('Erro ao adicionar atividades: ' + err.message, 'danger');
+            } catch (error) {
+                console.error('[LOG CABRA] Erro ao iniciar sessão:', error);
+                showToast('Erro ao iniciar sessão: ' + error.message, 'danger');
             } finally {
-                if (btnConfirmar) btnConfirmar.disabled = false;
                 hideLoading();
             }
-        };
-    }
-
-    // Cancelar
-    if (cancelarAdicionarBtn) {
-        cancelarAdicionarBtn.onclick = () => {
-            atividadesFormAdicionar.style.display = 'none';
-            adicionarTriggerBtn.style.display = 'block';
-            if (finalizarSessaoBtn) finalizarSessaoBtn.style.display = 'block';
-        };
+        });
     }
 
     // --- INITIALIZATION ---
@@ -1298,46 +1298,6 @@ window.testAdicionarAtividade = async function(atividadeId) {
 function getElapsedTime() {
     if (!appState.startTime) return 0;
     return Math.floor((Date.now() - appState.startTime.getTime()) / 1000); // segundos
-}
-
-if (atividadesFormIniciar) {
-    atividadesFormIniciar.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const checkboxes = atividadesFormIniciar.querySelectorAll('input[type="checkbox"]:checked');
-        const atividades = Array.from(checkboxes).map(cb => parseInt(cb.value));
-        console.log('[LOG CABRA] Atividades selecionadas para iniciar sessão:', atividades);
-        if (atividades.length === 0) {
-            showToast('Selecione pelo menos uma atividade.', 'danger');
-            return;
-        }
-        showLoading();
-        try {
-            const response = await fetch(`/api/boxes/${appState.boxId}/sessao-servico/iniciar/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${appState.jwtToken}`
-                },
-                body: JSON.stringify({ atividades })
-            });
-            const data = await response.json();
-            console.log('[LOG CABRA] Resposta da API ao iniciar sessão:', data);
-            if (response.ok) {
-                showToast('Sessão iniciada com sucesso!', 'success');
-                showStateActiveSession(data);
-            } else if (response.status === 409) {
-                showToast('Já existe uma sessão ativa neste box. Redirecionando...', 'warning');
-                await checkLoginStatus();
-            } else {
-                showToast(data.detail || 'Erro ao iniciar sessão.', 'danger');
-            }
-        } catch (error) {
-            console.error('[LOG CABRA] Erro ao iniciar sessão:', error);
-            showToast('Erro ao iniciar sessão: ' + error.message, 'danger');
-        } finally {
-            hideLoading();
-        }
-    });
 }
 </script>
 {% endblock %}
