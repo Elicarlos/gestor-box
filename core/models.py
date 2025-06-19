@@ -1,22 +1,31 @@
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import BaseUserManager, User
 from django.utils import timezone
 
+
 class FuncionarioManager(BaseUserManager):
-    def create_user(self, matricula, nome, senha=None):
+    """Custom manager to create Funcionario along with its related User."""
+
+    def create_user(self, matricula, nome, senha=None, **extra_fields):
+        """Create and return a ``Funcionario`` with an associated ``User``."""
         if not matricula:
             raise ValueError('Funcionário precisa de código de barras')
-        user = self.model(matricula=matricula, nome=nome)
-        user.set_password(senha)
-        user.save(using=self._db)
-        return user
 
-from django.contrib.auth.models import User
+        user = User.objects.create_user(
+            username=matricula,
+            password=senha,
+            first_name=nome,
+        )
+
+        funcionario = self.model(user=user, matricula=matricula, **extra_fields)
+        funcionario.save(using=self._db)
+        return funcionario
 
 class Funcionario(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='funcionario')
     matricula = models.CharField(max_length=50, unique=True)
     filial = models.ForeignKey('Filial', on_delete=models.CASCADE, related_name='funcionarios', null=True, blank=True)
+    objects = FuncionarioManager()
     def __str__(self):
         if self.user:
             return self.user.get_full_name() or self.user.username
