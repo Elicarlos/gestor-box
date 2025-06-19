@@ -732,21 +732,23 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (appState.sessaoId) {
                 const sessionData = await fetchAPI('/api/verificar-sessao/', {method: 'GET'});
                 if (sessionData && sessionData.active_session) {
-                    currentIds = sessionData.active_session.atividades.map(a => a.id);
+                    currentIds = sessionData.active_session.atividades.map(a => a.atividade.id);
                 }
             }
             const available = allActivities.filter(a => !currentIds.includes(a.id));
-            atividadesListAdicionar.innerHTML = '';
-            if (available.length === 0) {
-                atividadesListAdicionar.innerHTML = '<li class="list-group-item text-muted">Nenhuma atividade disponível para adicionar.</li>';
-            } else {
-                available.forEach(a => {
-                    atividadesListAdicionar.innerHTML += `
-                      <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span><input type="checkbox" value="${a.id}" class="form-check-input me-2"> ${a.nome}</span>
-                        <span class="badge bg-primary rounded-pill">${a.duracao_estimada} min</span>
-                      </li>`;
-                });
+            if (atividadesListAdicionar) {
+                atividadesListAdicionar.innerHTML = '';
+                if (available.length === 0) {
+                    atividadesListAdicionar.innerHTML = '<li class="list-group-item text-muted">Nenhuma atividade disponível para adicionar.</li>';
+                } else {
+                    available.forEach(a => {
+                        atividadesListAdicionar.innerHTML += `
+                          <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><input type="checkbox" value="${a.id}" class="form-check-input me-2"> ${a.nome}</span>
+                            <span class="badge bg-primary rounded-pill">${a.duracao_estimada} min</span>
+                          </li>`;
+                    });
+                }
             }
         } catch (e) {
             showToast('Erro ao carregar atividades: ' + e.message, 'danger');
