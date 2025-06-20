@@ -24,6 +24,7 @@ from .serializers import (
 )
 from .forms import FuncionarioForm, FilialForm, BoxForm, AtividadeForm
 from .decorators import permission_required, admin_or_manager_required
+from core.utils import acionar_lampada
 
 
 # -------------------- VIEWS DE TEMPLATES --------------------
@@ -291,6 +292,7 @@ class BoxViewSet(viewsets.ReadOnlyModelViewSet):
         for i, atv_id in enumerate(ids, start=1):
             SessaoAtividade.objects.create(sessao_servico=sess, atividade_id=atv_id, ordem=i)
         # publish.single(f"boxes/{box.id}/light", 'red', hostname='localhost')
+        acionar_lampada(box.id, 'start')
         return Response(SessaoServicoSerializer(sess).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'], url_path='sessao-servico/finalizar', permission_classes=[permissions.IsAuthenticated], authentication_classes=[JWTAuthentication])
@@ -316,7 +318,7 @@ class BoxViewSet(viewsets.ReadOnlyModelViewSet):
             publish.single(f"box/{box.id}/status", "livre", hostname="127.0.0.1")
         except Exception as e:
             print(f"Erro ao publicar no MQTT: {e}")
-
+        acionar_lampada(box.id, 'stop')
         return Response({'detail': 'Sessão finalizada com sucesso.'}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'], url_path='sessao-servico/adicionar-atividades', permission_classes=[permissions.IsAuthenticated], authentication_classes=[JWTAuthentication])
