@@ -229,7 +229,7 @@
                     <p class="card-text">Selecione uma atividade para iniciar a sessão:</p>
                     <form id="atividades-form-iniciar">
                         <ul id="atividades-iniciar-list" class="list-group list-group-flush mb-3"></ul>
-                        <button type="submit" id="iniciar-btn" class="btn btn-success btn-lg w-100" style="background-color: #198754; border-color: #198754; color: #fff; display:none;">Iniciar Sessão</button>
+                        <button type="submit" id="iniciar-btn" class="btn btn-primary btn-lg w-100" style="background-color: #0d6efd; border-color: #0d6efd; color: #fff; display:none;">Iniciar Sessão</button>
                     </form>
                 </div>
             </div>
@@ -285,7 +285,7 @@
             <form id="atividades-form-adicionar">
                 <ul id="atividades-adicionar-list" class="list-group list-group-flush mb-3"></ul>
                 <div class="d-grid gap-2">
-                    <button type="submit" id="btn-confirmar-adicao" class="btn btn-success" style="background-color: #198754; border-color: #198754; color: #fff;" disabled>Confirmar</button>
+                    <button type="submit" id="btn-confirmar-adicao" class="btn btn-primary" style="background-color: #0d6efd; border-color: #0d6efd; color: #fff;" disabled>Confirmar</button>
                     <button type="button" id="cancelar-adicionar-btn" class="btn btn-secondary" style="background-color: #6c757d; border-color: #6c757d; color: #fff;">Cancelar</button>
             </div>
             </form>
@@ -649,6 +649,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('status-sessao').textContent = isDelayed ? 'Atrasado' : 'Em andamento';
         document.getElementById('status-sessao').classList.toggle('bg-danger', isDelayed);
         document.getElementById('status-sessao').classList.toggle('bg-success', !isDelayed);
+
+        // Atualiza o timer do topo
+        const timerDisplay = document.querySelector('.timer-display');
+        if (timerDisplay) timerDisplay.textContent = formatTime(elapsedMs);
     }
 
     function startSessionTimer() {
