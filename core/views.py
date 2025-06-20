@@ -6,6 +6,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.db import models
+from django.db.models import Q
 
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action, api_view, permission_classes
@@ -386,3 +387,27 @@ def relatorio_sessoes(request):
 def logout_funcionario(request):
     logout(request)
     return redirect('/terminal/')
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def cadastrar_atividade(request):
+    nome = request.data.get('nome')
+    duracao = request.data.get('duracao_estimada')
+    filial = getattr(request.user.funcionario, 'filial', None)
+    if not nome or not duracao:
+        return Response({'detail': 'Nome e duração são obrigatórios.'}, status=400)
+    # Verifica se já existe atividade global com esse nome
+    atividade = Atividade.objects.filter(nome=nome, filial=None).first()
+    if atividade:
+        return Response({'detail': 'Atividade global já existe.', 'atividade_id': atividade.id}, status=200)
+    # Se não existe, cria nova atividade global
+    atividade = Atividade.objects.create(nome=nome, duracao_estimada=duracao, filial=None)
+    return Response({'detail': 'Atividade global criada.', 'atividade_id': atividade.id}, status=201)
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def listar_atividades(request):
+    filial = getattr(request.user.funcionario, 'filial', None)
+    atividades = Atividade.objects.filter(Q(filial=None) | Q(filial=filial))
+    data = [{'id': a.id, 'nome': a.nome, 'duracao_estimada': a.duracao_estimada, 'filial': a.filial_id} for a in atividades]
+    return Response(data)
