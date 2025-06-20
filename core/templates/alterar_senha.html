@@ -1,69 +1,96 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container mt-5" style="max-width:500px;">
-  <div class="card shadow-sm">
-    <div class="card-body">
-      <h2 class="card-title text-center mb-4">Alterar Senha</h2>
-      {% if messages %}
-        {% for message in messages %}
-          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+          <div class="text-center mb-4">
+            <i class="bi bi-key-fill fs-1 text-primary"></i>
+            <h2 class="h3 mb-1">Alterar Senha</h2>
+            <p class="text-muted small">Mantenha sua conta segura.</p>
           </div>
-        {% endfor %}
-      {% endif %}
-      <form method="post" id="alterarSenhaForm">
-        {% csrf_token %}
-        <div class="mb-3">
-          <label for="senha_atual" class="form-label">Senha atual</label>
-          <div class="input-group">
-            <input type="password" class="form-control" id="senha_atual" name="senha_atual" required>
-            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('senha_atual')">
-              <i class="bi bi-eye"></i>
-            </button>
-          </div>
+
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert alert-{{ message.tags }} alert-dismissible fade show py-2 small" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+
+          <form method="post" id="alterarSenhaForm">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label for="senha_atual" class="form-label small">Senha atual</label>
+              <div class="input-group">
+                <input type="password" class="form-control" id="senha_atual" name="senha_atual" required>
+                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('senha_atual')"><i class="bi bi-eye"></i></button>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="nova_senha" class="form-label small">Nova senha</label>
+              <div class="input-group">
+                <input type="password" class="form-control" id="nova_senha" name="nova_senha" required pattern="^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$" title="A senha deve ter pelo menos 8 caracteres, incluindo letras e números">
+                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('nova_senha')"><i class="bi bi-eye"></i></button>
+              </div>
+              <div class="progress mt-2" style="height: 4px;">
+                <div class="progress-bar" id="senhaForca" role="progressbar" style="width: 0%"></div>
+              </div>
+              <small class="form-text text-muted" style="font-size: 0.75rem;">Mínimo 8 caracteres, com letras e números.</small>
+            </div>
+
+            <div class="mb-4">
+              <label for="nova_senha2" class="form-label small">Confirme a nova senha</label>
+              <div class="input-group">
+                <input type="password" class="form-control" id="nova_senha2" name="nova_senha2" required>
+                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('nova_senha2')"><i class="bi bi-eye"></i></button>
+              </div>
+              <div class="invalid-feedback" id="senha-feedback" style="font-size: 0.8rem;">As senhas não coincidem.</div>
+            </div>
+
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-primary py-2" id="submitBtn">
+                <i class="bi bi-key me-2"></i>Alterar Senha
+              </button>
+              <a href="/" class="btn btn-outline-secondary py-2">
+                <i class="bi bi-arrow-left me-2"></i>Voltar
+              </a>
+            </div>
+          </form>
         </div>
-        <div class="mb-3">
-          <label for="nova_senha" class="form-label">Nova senha</label>
-          <div class="input-group">
-            <input type="password" class="form-control" id="nova_senha" name="nova_senha" required 
-                   pattern="^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$" 
-                   title="A senha deve ter pelo menos 8 caracteres, incluindo letras e números">
-            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('nova_senha')">
-              <i class="bi bi-eye"></i>
-            </button>
-          </div>
-          <div class="progress mt-2" style="height: 5px;">
-            <div class="progress-bar" id="senhaForca" role="progressbar" style="width: 0%"></div>
-          </div>
-          <small class="form-text text-muted">
-            A senha deve ter pelo menos 8 caracteres, incluindo letras e números
-          </small>
-        </div>
-        <div class="mb-4">
-          <label for="nova_senha2" class="form-label">Confirme a nova senha</label>
-          <div class="input-group">
-            <input type="password" class="form-control" id="nova_senha2" name="nova_senha2" required>
-            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('nova_senha2')">
-              <i class="bi bi-eye"></i>
-            </button>
-          </div>
-          <div class="invalid-feedback" id="senha-feedback">
-            As senhas não coincidem
-          </div>
-        </div>
-        <div class="d-grid gap-2">
-          <button type="submit" class="btn btn-primary" id="submitBtn">
-            <i class="bi bi-key me-2"></i>Alterar Senha
-          </button>
-          <a href="/" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-2"></i>Voltar
-          </a>
-        </div>
-      </form>
+      </div>
     </div>
   </div>
 </div>
+
+<style>
+/* Estilos unificados */
+.form-control, .form-select {
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.5rem !important;
+  border: 1px solid #dee2e6;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+}
+.form-control:focus, .form-select:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+.btn {
+  padding: 0.6rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+}
+.form-label.small {
+    font-weight: 500;
+    margin-bottom: 0.3rem;
+}
+</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -76,21 +103,18 @@ document.addEventListener('DOMContentLoaded', function() {
     function avaliarForcaSenha(senha) {
         let pontos = 0;
         if (senha.length >= 8) pontos += 25;
-        if (senha.match(/[A-Z]/)) pontos += 25;
+        if (senha.match(/[a-z]/) && senha.match(/[A-Z]/)) pontos += 25;
         if (senha.match(/[0-9]/)) pontos += 25;
         if (senha.match(/[^A-Za-z0-9]/)) pontos += 25;
         
         senhaForca.style.width = pontos + '%';
-        
-        if (pontos <= 25) {
-            senhaForca.className = 'progress-bar bg-danger';
-        } else if (pontos <= 50) {
-            senhaForca.className = 'progress-bar bg-warning';
-        } else if (pontos <= 75) {
-            senhaForca.className = 'progress-bar bg-info';
-        } else {
-            senhaForca.className = 'progress-bar bg-success';
-        }
+        const classes = ['bg-danger', 'bg-warning', 'bg-info', 'bg-success'];
+        senhaForca.classList.remove(...classes);
+
+        if (pontos <= 25) senhaForca.classList.add('bg-danger');
+        else if (pontos <= 50) senhaForca.classList.add('bg-warning');
+        else if (pontos <= 75) senhaForca.classList.add('bg-info');
+        else senhaForca.classList.add('bg-success');
     }
     
     novaSenha.addEventListener('input', function() {
@@ -116,30 +140,45 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     form.addEventListener('submit', function(e) {
-        const senha1 = novaSenha.value;
-        const senha2 = novaSenha2.value;
-        
-        if (senha1 !== senha2) {
+        if (novaSenha.value !== novaSenha2.value) {
             e.preventDefault();
             novaSenha2.classList.add('is-invalid');
+            showToast('As senhas não coincidem.', 'danger');
         }
     });
 });
 
 function togglePassword(inputId) {
     const input = document.getElementById(inputId);
-    const button = input.nextElementSibling;
+    const button = input.closest('.input-group').querySelector('button');
     const icon = button.querySelector('i');
     
     if (input.type === 'password') {
         input.type = 'text';
-        icon.classList.remove('bi-eye');
-        icon.classList.add('bi-eye-slash');
+        icon.classList.replace('bi-eye', 'bi-eye-slash');
     } else {
         input.type = 'password';
-        icon.classList.remove('bi-eye-slash');
-        icon.classList.add('bi-eye');
+        icon.classList.replace('bi-eye-slash', 'bi-eye');
     }
+}
+
+// Supondo que a função showToast exista ou seja adicionada.
+function showToast(message, type = 'success') {
+    // Implementação de um simples toast.
+    const toastContainer = document.querySelector('.container');
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} alert-dismissible fade show`;
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+    
+    // Insere o toast no topo do container
+    toastContainer.insertBefore(toast, toastContainer.firstChild);
+
+    // Remove o toast após alguns segundos
+    setTimeout(() => {
+        const bsAlert = new bootstrap.Alert(toast);
+        bsAlert.close();
+    }, 4000);
 }
 </script>
 {% endblock %}

@@ -6,9 +6,6 @@
     <style>
 :root {
     --primary-color: #0d6efd;
-    --success-color: #198754;
-    --warning-color: #ffc107;
-    --danger-color: #dc3545;
 }
 
 .display-icon {
@@ -107,6 +104,11 @@
     overflow-y: auto;
     margin-bottom: 1rem;
 }
+
+.btn-success { background-color: #198754 !important; border-color: #198754 !important; color: #fff !important; }
+.btn-success:disabled, .btn-success.disabled { background-color: #198754 !important; border-color: #198754 !important; }
+.btn-secondary { background-color: #6c757d !important; border-color: #6c757d !important; color: #fff !important; }
+.btn-secondary:disabled, .btn-secondary.disabled { background-color: #6c757d !important; border-color: #6c757d !important; }
     </style>
 {% endblock %}
 
@@ -227,7 +229,7 @@
                     <p class="card-text">Selecione uma atividade para iniciar a sessão:</p>
                     <form id="atividades-form-iniciar">
                         <ul id="atividades-iniciar-list" class="list-group list-group-flush mb-3"></ul>
-                        <button type="submit" id="iniciar-btn" class="btn btn-success btn-lg w-100" style="display:none;">Iniciar Sessão</button>
+                        <button type="submit" id="iniciar-btn" class="btn btn-success btn-lg w-100" style="background-color: #198754; border-color: #198754; color: #fff; display:none;">Iniciar Sessão</button>
                     </form>
                 </div>
             </div>
@@ -269,7 +271,7 @@
                     <div class="mb-2 fw-bold">Atividades da Sessão:</div>
                     <ul id="session-activities-list" class="list-group mb-3"></ul>
             
-                    <button id="adicionarAtividadesBtn" class="btn btn-info btn-lg w-100 mb-2" aria-label="Adicionar Atividade"><i class="bi bi-plus-circle me-1"></i>Adicionar Atividade</button>
+                    <button id="adicionarAtividadesBtn" class="btn btn-primary btn-lg w-100 mb-2" aria-label="Adicionar Atividade"><i class="bi bi-plus-circle me-1"></i>Adicionar Atividade</button>
                     <button id="finalizarSessaoBtn" class="btn btn-danger btn-lg w-100" aria-label="Finalizar Sessão"><i class="bi bi-stop-circle me-1"></i>Finalizar Sessão</button>
                 </div>
             </div>
@@ -283,8 +285,8 @@
             <form id="atividades-form-adicionar">
                 <ul id="atividades-adicionar-list" class="list-group list-group-flush mb-3"></ul>
                 <div class="d-grid gap-2">
-                    <button type="submit" id="btn-confirmar-adicao" class="btn btn-success" disabled>Confirmar</button>
-                    <button type="button" id="cancelar-adicionar-btn" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" id="btn-confirmar-adicao" class="btn btn-success" style="background-color: #198754; border-color: #198754; color: #fff;" disabled>Confirmar</button>
+                    <button type="button" id="cancelar-adicionar-btn" class="btn btn-secondary" style="background-color: #6c757d; border-color: #6c757d; color: #fff;">Cancelar</button>
             </div>
             </form>
             </div>
@@ -394,10 +396,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     function showToast(message, type = 'success') {
         if (!toastRoot) return;
         const toastId = 'toast-' + Date.now();
+        // Força texto branco para sucesso
+        const msg = type === 'success' ? `<span style="color:#fff">${message}</span>` : message;
         const toastHTML = `
             <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
-                    <div class="toast-body"><i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>${message}</div>
+                    <div class="toast-body"><i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>${msg}</div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>
             </div>`;
