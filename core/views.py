@@ -269,7 +269,8 @@ class BoxViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=['get'], url_path='atividades-disponiveis', permission_classes=[permissions.IsAuthenticated], authentication_classes=[JWTAuthentication])
     def atividades_disponiveis(self, request):
         func = request.user.funcionario
-        sess = SessaoServico.objects.filter(funcionario=func, data_hora_fim__isnull=True).first()
+        # Seleciona a sessão ativa mais recente (caso existam múltiplas abertas por engano)
+        sess = SessaoServico.objects.filter(funcionario=func, data_hora_fim__isnull=True).order_by('-data_hora_inicio').first()
         if not sess:
             qs = Atividade.objects.all()
         else:

@@ -263,7 +263,7 @@
                     <div class="mb-2 fw-bold">Atividades da Sessão:</div>
                     <ul id="session-activities-list" class="list-group mb-3"></ul>      
 
-                    <button id="adicionarAtividadesBtn" class="btn btn-info btn-lg w-100 mb-2" aria-label="Adicionar Atividade"><i class="bi bi-plus-circle me-1"></i>Adicionar Atividade a sessao Teste</button>
+                    <button id="adicionarAtividadesBtn" class="btn btn-info btn-lg w-100 mb-2" aria-label="Adicionar Atividade"><i class="bi bi-plus-circle me-1"></i>Adicionar Atividade</button>
                     <button id="finalizarSessaoBtn" class="btn btn-danger btn-lg w-100" aria-label="Finalizar Sessão"><i class="bi bi-stop-circle me-1"></i>Finalizar Sessão</button>
                 </div>
             </div>
@@ -379,11 +379,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     const iniciarBtn = document.getElementById('iniciar-btn');
     const sessaoAtivaControls = document.getElementById('sessao-ativa-controls');
     const finalizarSessaoBtn = document.getElementById('finalizarSessaoBtn');
-    const adicionarTriggerBtn = document.getElementById('adicionarAtividadesBtn');
+    const adicionarAtividadesBtn = document.getElementById('adicionarAtividadesBtn');
 
     const atividadesFormAdicionar = document.getElementById('atividades-form-adicionar');
     const atividadesListAdicionar = document.getElementById('atividades-adicionar-list'); // Corrected ID for add modal list
     const cancelarAdicionarBtn = document.getElementById('cancelar-adicionar-btn');
+    const atividadesContainer = document.getElementById('atividades-container');
 
     const atividadesTitle = document.getElementById('atividades-title');
     const estadoIniciar = document.getElementById('state-iniciar');
@@ -488,7 +489,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             if (atividadesTitle) atividadesTitle.textContent = 'Selecione as atividades para iniciar:';
             if (iniciarBtn) iniciarBtn.style.display = 'inline-block';
-            if (adicionarTriggerBtn) adicionarTriggerBtn.style.display = 'none';
+            if (adicionarAtividadesBtn) adicionarAtividadesBtn.style.display = 'none';
             if (finalizarSessaoBtn) finalizarSessaoBtn.style.display = 'none';
             if (atividadesFormIniciar) atividadesFormIniciar.reset();
             
@@ -564,7 +565,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     function showAdicionarAtividades() {
         if (atividadesFormAdicionar) {
             atividadesFormAdicionar.style.display = 'block';
-            adicionarTriggerBtn.style.display = 'none';
+            adicionarAtividadesBtn.style.display = 'none';
             if (finalizarSessaoBtn) finalizarSessaoBtn.style.display = 'none';
             loadActivitiesForAdding();
             // Foco no primeiro checkbox após renderizar
@@ -690,6 +691,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (!resp.ok) throw new Error('Refresh token inválido');
             const data = await resp.json();
             localStorage.setItem('jwtToken', data.access);
+            localStorage.setItem('jwtToken', data.access);
+            localStorage.setItem('refreshToken', data.refresh);
             return true;
         } catch (e) {
             localStorage.clear();
@@ -1006,6 +1009,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (response.ok) {
                 console.log('[LOG] Login bem sucedido, salvando tokens e dados do usuário');
                 localStorage.setItem('jwtToken', data.access);
+                localStorage.setItem('jwtToken', data.access);
                 localStorage.setItem('refreshToken', data.refresh);
                 localStorage.setItem('funcionario', JSON.stringify(data.user));
                 appState.funcionario = data.user;
@@ -1075,90 +1079,49 @@ document.addEventListener('DOMContentLoaded', async function() {
                 hideLoading();
             }
         });
-    }
-
-    if (adicionarTriggerBtn) {
-        adicionarTriggerBtn.addEventListener('click', async function() {
-            console.log('[LOG] Clique no botão Adicionar Atividade');
-            // Garante que boxId está definido
-            if (!appState.boxId && selectBox && selectBox.value) {
-                appState.boxId = selectBox.value;
-                console.log('[LOG] boxId recuperado do selectBox:', appState.boxId);
-            }
-            // Exibir o mesmo bloco de seleção de atividades usado para iniciar sessão
-            if (estadoIniciar && sessaoAtivaControls) {
-                estadoIniciar.style.display = 'block';
-                sessaoAtivaControls.style.display = 'none';
-                if (atividadesTitle) atividadesTitle.textContent = 'Selecione atividades para adicionar:';
-                if (iniciarBtn) {
-                    iniciarBtn.textContent = 'Adicionar Atividades';
-                    iniciarBtn.style.display = 'inline-block';
-                }
-                // Carregar atividades disponíveis para adicionar
-                await loadActivitiesForAdding();
-                // Trocar o event listener do formulário para adicionar atividades
-                atividadesFormAdicionar.onsubmit = async function(e) {
-                    e.preventDefault();
-                    // Verifica se boxId está definido
-                    if (!appState.boxId) {
-                        console.log('[LOG] boxId não definido no submit');
-                        showToast('Erro: Box não selecionado.', 'danger');
-                        return;
-                    }
-                    const checkboxes = atividadesFormAdicionar.querySelectorAll('input[type="checkbox"]:checked');
-                    const atividades = Array.from(checkboxes).map(cb => parseInt(cb.value));
-                    console.log('[LOG] IDs das atividades selecionadas para adicionar:', atividades);
-                    if (atividades.length === 0) {
-                        showToast('Selecione pelo menos uma atividade.', 'danger');
-                        return;
-                    }
-                    showLoading();
-                    try {
-                        console.log('[LOG] Enviando POST para adicionar atividades. boxId:', appState.boxId);
-                        const response = await fetch(`/api/boxes/${appState.boxId}/sessao-servico/adicionar-atividades/`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${appState.jwtToken}`
-                            },
-                            body: JSON.stringify({ atividades })
-                        });
-                        const data = await response.json();
-                        console.log('[LOG] Resposta da API ao adicionar atividades:', data);
-                        if (response.ok) {
-                            showToast('Atividades adicionadas com sucesso!', 'success');
-                            await atualizarSessaoEUI();
-                        } else {
-                            showToast(data.detail || 'Erro ao adicionar atividades.', 'danger');
+                    // Trocar o event listener do formulário para adicionar atividades
+                    atividadesFormAdicionar.onsubmit = async function(e) {
+                        e.preventDefault();
+                        // Verifica se boxId está definido
+                        if (!appState.boxId) {
+                            console.log('[LOG] boxId não definido no submit');
+                            showToast('Erro: Box não selecionado.', 'danger');
+                            return;
                         }
-                    } catch (error) {
-                        console.error('[LOG] Erro ao adicionar atividades:', error);
-                        showToast('Erro ao adicionar atividades: ' + error.message, 'danger');
-                    } finally {
-                        hideLoading();
-                    }
-                };
-            }
+                        const checkboxes = atividadesFormAdicionar.querySelectorAll('input[type="checkbox"]:checked');
+                        const atividades = Array.from(checkboxes).map(cb => parseInt(cb.value));
+                        console.log('[LOG] IDs das atividades selecionadas para adicionar:', atividades);
+                        if (atividades.length === 0) {
+                            showToast('Selecione pelo menos uma atividade.', 'danger');
+                            return;
+                        }
+                        showLoading();
+                        try {
+                            console.log('[LOG] Enviando POST para adicionar atividades. boxId:', appState.boxId);
+                            const response = await fetch(`/api/boxes/${appState.boxId}/sessao-servico/adicionar-atividades/`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${appState.jwtToken}`
+                                },
+                                body: JSON.stringify({ atividades })
+                            });
+                            const data = await response.json();
+                            console.log('[LOG] Resposta da API ao adicionar atividades:', data);
+                            if (response.ok) {
+                                showToast('Atividades adicionadas com sucesso!', 'success');
+                                await atualizarSessaoEUI();
+                            } else {
+                                showToast(data.detail || 'Erro ao adicionar atividades.', 'danger');
+                            }
+                        } catch (error) {
+                            console.error('[LOG] Erro ao adicionar atividades:', error);
+                            showToast('Erro ao adicionar atividades: ' + error.message, 'danger');
+                        } finally {
+                            hideLoading();
+                        }
+                    };
         });
-    }
-
-    // Adiciona evento para cancelar adicionar atividades
-    if (cancelarAdicionarBtn) {
-        cancelarAdicionarBtn.addEventListener('click', function() {
-            if (atividadesFormAdicionar) atividadesFormAdicionar.style.display = 'none';
-            if (adicionarTriggerBtn) adicionarTriggerBtn.style.display = 'inline-block';
-            if (finalizarSessaoBtn) finalizarSessaoBtn.style.display = 'inline-block';
-        });
-    }
-
-    // Habilita o botão só se houver seleção
-    if (atividadesFormAdicionar) {
-        atividadesFormAdicionar.addEventListener('change', () => {
-            const checked = atividadesFormAdicionar.querySelectorAll('input[type="checkbox"]:checked');
-            const btnConfirmar = document.getElementById('btn-confirmar-adicao');
-            if (btnConfirmar) btnConfirmar.disabled = checked.length === 0;
-        });
-    }
 
     // Submit do formulário
     if (atividadesFormIniciar) {
@@ -1209,54 +1172,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Verificar status de login
     await checkLoginStatus();
 
-    // Garante que o botão de adicionar atividade sempre terá o event listener
-    const btnAdicionar = document.getElementById('adicionarAtividadesBtn');
-    if (btnAdicionar) {
-        btnAdicionar.addEventListener('click', function() {
+    // Botão já capturado anteriormente. Nenhuma nova declaração necessária.
+    if (adicionarAtividadesBtn) {
+        adicionarAtividadesBtn.addEventListener('click', function() {
             console.log('[LOG] Clique no botão Adicionar Atividade');
             showAdicionarAtividades();
         });
-    } else {
-        console.warn('[LOG] Botão Adicionar Atividade não encontrado no DOM');
     }
 
     // Preenche o nome do usuário na navbar ao carregar a página
     atualizarNavbarUsuario();
-});
 
-async function atualizarSessaoEUI() {
-    // 1. Buscar dados atualizados da sessão
-    const sessionData = await fetchAPI('/api/verificar-sessao/', {method: 'GET'});
-    if (sessionData && sessionData.active_session) {
-        renderSessionActivities(sessionData.active_session.atividades);
-    }
-    // 2. Verificar se ainda há atividades para adicionar
-    const atividadesDisponiveis = await fetchAPI('/api/boxes/atividades-disponiveis/', {method: 'GET'});
-    const btnAdicionar = document.getElementById('adicionarAtividadesBtn');
-    if (btnAdicionar) {
-        if (atividadesDisponiveis.length === 0) {
-            btnAdicionar.style.display = 'none';
-        } else {
-            btnAdicionar.style.display = 'block';
-        }
-    }
-    // Esconde o formulário de adicionar atividades, se estiver aberto
-    if (atividadesFormAdicionar) atividadesFormAdicionar.style.display = 'none';
-    if (finalizarSessaoBtn) finalizarSessaoBtn.style.display = 'inline-block';
-}
-
-function atualizarNavbarUsuario() {
-    const navbarUserBlock = document.getElementById('navbar-user-block');
-    const navbarUserSpan = document.getElementById("navbar-user-name");
-    const storedFuncionario = localStorage.getItem('funcionario');
-    if (navbarUserBlock && navbarUserSpan && storedFuncionario) {
-        const user = JSON.parse(storedFuncionario);
-        navbarUserSpan.textContent = user.nome_completo || user.username;
-        navbarUserBlock.style.display = 'flex';
-    } else if (navbarUserBlock) {
-        navbarUserBlock.style.display = 'none';
-    }
-}
 
 // Expor funções para testes manuais no window
 window.testFinalizarSessao = async function() {
@@ -1297,6 +1223,7 @@ window.testAdicionarAtividade = async function(atividadeId) {
             body: JSON.stringify({ atividades: [atividadeId] })
         });
         const data = await response.json();
+        console.log('[LOG] Resposta da API ao adicionar atividades:', data);
         if (response.ok) {
             showToast('Atividade adicionada com sucesso!', 'success');
             await atualizarSessaoEUI();
@@ -1304,6 +1231,7 @@ window.testAdicionarAtividade = async function(atividadeId) {
             showToast(data.detail || 'Erro ao adicionar atividade.', 'danger');
         }
     } catch (error) {
+        console.error('[LOG] Erro ao adicionar atividades:', error);
         showToast('Erro ao adicionar atividade: ' + error.message, 'danger');
     } finally {
         hideLoading();
