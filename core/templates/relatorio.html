@@ -162,8 +162,8 @@ function showToast(message, type = 'success') {
             detalhesCell = `<a href="#" class="text-primary" data-bs-toggle="modal" data-bs-target="#detalhesModal"
                      data-atividades="${encodeURIComponent(JSON.stringify(atividades.map(a => a.atividade.nome)))}"
                      data-info="${encodeURIComponent(JSON.stringify(sessao))}">
-                     <i class="bi bi-eye-fill fs-5"></i>
-                   </a>`;
+                            <i class="bi bi-eye-fill fs-5"></i>
+                          </a>`;
           } else {
               detalhesCell = 'Nenhuma';
           }
@@ -177,9 +177,9 @@ function showToast(message, type = 'success') {
             <td>${sessao.box.nome || '-'}</td>
             <td>${inicioFmt}</td>
             <td>${fimFmt}</td>
-            <td>${status}</td>
+          <td>${status}</td>
             <td>${sessao.duracao_real || 'N/A'}</td>
-            <td>${sessao.soma_estimada_min || 'N/A'} min</td>
+          <td>${sessao.soma_estimada_min || 'N/A'} min</td>
             <td>${detalhesCell}</td>
           `;
           tbody.appendChild(row);
