@@ -185,6 +185,24 @@
                 nameSpan.textContent = '';
             }
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Garante que a navbar é atualizada quando a página carrega
+            atualizarNavbarUsuario();
+
+            // Adiciona um listener para o botão de logout
+            const logoutButton = document.querySelector('form[action="/logout/"] button');
+            if (logoutButton) {
+                logoutButton.closest('form').addEventListener('submit', function() {
+                    console.log('Logout Pressionado. Limpando localStorage...');
+                    localStorage.removeItem('jwtToken');
+                    localStorage.removeItem('refreshToken');
+                    localStorage.removeItem('funcionario');
+                    // Não é necessário chamar atualizarNavbarUsuario() aqui,
+                    // pois a página será recarregada após o logout.
+                });
+            }
+        });
     </script>
     {% block scripts %}{% endblock %}
 </body>

@@ -341,7 +341,8 @@
 
 {% block scripts %}
 <script>
-
+document.addEventListener('DOMContentLoaded', async function() {
+    // --- ESTADO DA APLICAÇÃO ---
  const appState = {
         funcionario: null,
         jwtToken: localStorage.getItem('jwtToken') || null,
@@ -350,33 +351,18 @@
         sessaoId: null,
         sessionTimer: null,
         startTime: null,
-        inicioFormatado: '',
         currentMatricula: null,
         totalSessionEstimatedDuration: 0
     };
 
-if (!localStorage.getItem('jwtToken')) {
-    if (window.location.pathname !== '/terminal/') {
-        window.location.href = '/terminal/';
-    }
-}
-
-
-
-    document.addEventListener('DOMContentLoaded', async function() {
-    console.log("DOMContentLoaded started.");
     // --- ELEMENTOS DO DOM ---
     const loginView = document.getElementById('login-view');
     const appView = document.getElementById('app-view');
-    const boxForm = document.getElementById('box-form');
     const selectBox = document.getElementById('box-select');
     const matriculaInput = document.getElementById('matricula');
     const matriculaForm = document.getElementById('matricula-form');
-    const senhaModalElement = document.getElementById('senhaModal');
-    const senhaModal = senhaModalElement ? new bootstrap.Modal(senhaModalElement) : null;
-    let adicionarAtividadesModal; // Declare here, initialize after DOM is ready
-    const toastRoot = document.getElementById('toast-root'); // Ensure this is always defined from base.html
-
+    const senhaModal = new bootstrap.Modal(document.getElementById('senhaModal'));
+    const toastRoot = document.getElementById('toast-root');
     const senhaForm = document.getElementById('senha-form');
     const senhaInput = document.getElementById('senha');
     const togglePasswordBtn = document.getElementById('togglePassword');
@@ -387,16 +373,11 @@ if (!localStorage.getItem('jwtToken')) {
     const sessaoAtivaControls = document.getElementById('sessao-ativa-controls');
     const finalizarSessaoBtn = document.getElementById('finalizarSessaoBtn');
     const adicionarAtividadesBtn = document.getElementById('adicionarAtividadesBtn');
-
     const atividadesFormAdicionar = document.getElementById('atividades-form-adicionar');
-    const atividadesListAdicionar = document.getElementById('atividades-adicionar-list'); // Corrected ID for add modal list
+    const atividadesListAdicionar = document.getElementById('atividades-adicionar-list');
     const cancelarAdicionarBtn = document.getElementById('cancelar-adicionar-btn');
     const atividadesContainer = document.getElementById('atividades-container');
-
-    const atividadesTitle = document.getElementById('atividades-title');
     const estadoIniciar = document.getElementById('state-iniciar');
-
-    // Progress bar elements (updated IDs)
     const sessionProgressBarContainer = document.getElementById('session-progress-bar-container');
     const sessionProgressBar = document.getElementById('session-progress-bar');
     const sessionProgressText = document.getElementById('session-progress-text');
@@ -406,55 +387,28 @@ if (!localStorage.getItem('jwtToken')) {
     const sessionEndTimeDisplay = document.getElementById('session-end-time');
     const sessionActivitiesList = document.getElementById('session-activities-list');
 
-   
-
     // --- FUNÇÕES DE UI ---
-    function showLoading() {
-        if (spinnerOverlay) {
-            spinnerOverlay.style.display = 'flex';
-            console.log("Mostrar loading...");
-        }
-    }
-
-    function hideLoading() {
-        if (spinnerOverlay) {
-            spinnerOverlay.style.display = 'none';
-            console.log("Esconder loading...");
-        }
-    }
+    function showLoading() { if (spinnerOverlay) spinnerOverlay.style.display = 'flex'; }
+    function hideLoading() { if (spinnerOverlay) spinnerOverlay.style.display = 'none'; }
 
     function showToast(message, type = 'success') {
-        if (!toastRoot) {
-            console.error('Toast container (#toast-root) not found.');
-            return;
-        }
-        const toast = document.createElement('div');
-        toast.className = `toast align-items-center text-white bg-${type} border-0`;
-        toast.setAttribute('role', 'alert');
-        toast.setAttribute('aria-live', 'assertive');
-        toast.setAttribute('aria-atomic', 'true');
-        
-        toast.innerHTML = `
+        if (!toastRoot) return;
+        const toastId = 'toast-' + Date.now();
+        const toastHTML = `
+            <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
-                <div class="toast-body">
-                    <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
-                    ${message}
-                </div>
+                    <div class="toast-body"><i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>${message}</div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>
-        `;
-        
-        toastRoot.appendChild(toast);
-        const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+            </div>`;
+        toastRoot.insertAdjacentHTML('beforeend', toastHTML);
+        const toastElement = document.getElementById(toastId);
+        const bsToast = new bootstrap.Toast(toastElement, { delay: 3000 });
         bsToast.show();
-        
-        toast.addEventListener('hidden.bs.toast', () => {
-            toast.remove();
-        });
+        toastElement.addEventListener('hidden.bs.toast', () => toastElement.remove());
     }
 
     function showLoginView() {
-        if (loginView && appView) {
             loginView.style.display = 'block';
             appView.style.display = 'none';
             matriculaInput.value = '';
@@ -465,200 +419,103 @@ if (!localStorage.getItem('jwtToken')) {
             appState.funcionario = null;
             appState.jwtToken = null;
             appState.refreshToken = null;
-            console.log("showLoginView() chamado");
             resetProgressBar();
-            // Atualiza a navbar para refletir o estado de deslogado
-            if (typeof atualizarNavbarUsuario === 'function') atualizarNavbarUsuario();
+        if (typeof atualizarNavbarUsuario === 'function') {
+            atualizarNavbarUsuario();
         }
     }
 
     function showAppView() {
-        if (loginView && appView) {
             loginView.style.display = 'none';
             appView.style.display = 'block';
-            console.log("showAppView(): appView display set to block.");
-            // Atualiza o nome do usuário na navbar principal do base.html
-            const navbarUserSpan = document.querySelector('#navbarNav .dropdown-toggle span');
-            if (appState.funcionario && navbarUserSpan) {
-                navbarUserSpan.textContent = appState.funcionario.nome_completo;
-                console.log("showAppView(): Welcome message updated for: ", appState.funcionario.nome_completo);
-            }
-            // Atualiza a navbar para refletir o estado de logado
-            if (typeof atualizarNavbarUsuario === 'function') atualizarNavbarUsuario();
-            console.log("showAppView() chamado");
+        if (typeof atualizarNavbarUsuario === 'function') {
+            atualizarNavbarUsuario();
         }
     }
 
     function showStateIniciar(selectedBoxId = null) {
-        if (estadoIniciar && sessaoAtivaControls) {
             estadoIniciar.style.display = 'block';
-            // sessao-ativa-controls should be hidden when starting new session
             sessaoAtivaControls.style.display = 'none';
-            console.log("showStateIniciar(): estadoIniciar display set to block, sessaoAtivaControls hidden.");
-            console.log("showStateIniciar(): boxId when called:", appState.boxId); // Log the boxId here
-
-            if (atividadesTitle) atividadesTitle.textContent = 'Selecione as atividades para iniciar:';
-            if (iniciarBtn) iniciarBtn.style.display = 'inline-block';
-            if (finalizarSessaoBtn) finalizarSessaoBtn.style.display = 'none';
-            if (atividadesFormIniciar) atividadesFormIniciar.reset();
-            
+        atividadesFormIniciar.reset();
             if (selectedBoxId) {
                 appState.boxId = selectedBoxId;
-                selectBox.value = selectedBoxId; // Restore selected box
+            selectBox.value = selectedBoxId;
             }
-
             loadActivitiesForInitiation();
-            resetProgressBar(); // Ensure progress bar is reset
-
-            // Garante que o botão iniciar sessão esteja desabilitado inicialmente
-            if (iniciarBtn) iniciarBtn.disabled = true;
-
-            // Adiciona listener para habilitar/desabilitar o botão Iniciar Sessão
-            if (atividadesIniciarList && iniciarBtn) {
-                atividadesIniciarList.addEventListener('change', function() {
-                    const anyChecked = atividadesIniciarList.querySelector('input[type="checkbox"]:checked');
-                    iniciarBtn.disabled = !anyChecked;
-                });
-            }
-            console.log("showStateIniciar() chamado");
-        }
+        resetProgressBar();
+        iniciarBtn.disabled = true;
     }
 
     function showStateActiveSession(sessionData) {
-        if (estadoIniciar && sessaoAtivaControls) {
             estadoIniciar.style.display = 'none';
-            // Make sure sessaoAtivaControls is explicitly shown
             sessaoAtivaControls.style.display = 'block';
-            console.log("showStateActiveSession(): estadoIniciar hidden, sessaoAtivaControls display set to block.");
-
+        atividadesContainer.style.display = 'none';
             appState.sessaoId = sessionData.id;
-            // Preserva o boxId existente se não houver um novo
-            if (sessionData.box_id) {
                 appState.boxId = sessionData.box_id;
-            selectBox.value = sessionData.box_id; // Keep box selected in dropdown
-            }
-            console.log("showStateActiveSession(): boxId atualizado:", appState.boxId);
+        selectBox.value = sessionData.box_id;
 
-            const resumoFuncionario = document.getElementById('resumo-funcionario');
-            const resumoBox = document.getElementById('resumo-box');
-            let boxNome = sessionData.box_nome || (sessionData.box && sessionData.box.nome) || 'N/A';
-            if (resumoFuncionario && appState.funcionario) resumoFuncionario.textContent = appState.funcionario.nome_completo || 'N/A';
-            if (resumoBox) resumoBox.textContent = boxNome;
-            console.log("showStateActiveSession(): Updated funcionario and box resume.", {funcionario: appState.funcionario ? appState.funcionario.nome_completo : 'N/A', box: boxNome});
+        document.getElementById('resumo-funcionario').textContent = appState.funcionario.nome_completo || 'N/A';
+        document.getElementById('resumo-box').textContent = sessionData.box_nome || 'N/A';
 
             appState.startTime = new Date(sessionData.data_hora_inicio);
-            appState.totalSessionEstimatedDuration = sessionData.atividades.reduce((sum, activity) => sum + activity.atividade.duracao_estimada, 0);
-            // Exibe botões de controle da sessão
-            if (adicionarAtividadesBtn) adicionarAtividadesBtn.style.display = 'inline-block';
-            if (finalizarSessaoBtn) finalizarSessaoBtn.style.display = 'inline-block';
-
             renderSessionActivities(sessionData.atividades);
             startSessionTimer();
-            
-            if (sessionProgressBarContainer) {
-                sessionProgressBarContainer.style.display = 'block'; // Make progress bar visible
-                console.log("showStateActiveSession(): Progress bar container display set to block.");
-            }
-
-            // Preencher datas de início e fim
-            if (sessionStartTimeDisplay) {
-                sessionStartTimeDisplay.textContent = sessionData.data_hora_inicio
-                    ? new Date(sessionData.data_hora_inicio).toLocaleTimeString('pt-BR')
-                    : 'N/A';
-            }
-            if (sessionEndTimeDisplay) {
-                if (sessionData.data_hora_inicio && appState.totalSessionEstimatedDuration > 0) {
-                    const inicio = new Date(sessionData.data_hora_inicio);
-                    const estimativaFim = new Date(inicio.getTime() + appState.totalSessionEstimatedDuration * 60 * 1000);
-                    sessionEndTimeDisplay.textContent = estimativaFim.toLocaleTimeString('pt-BR');
-                } else {
-                    sessionEndTimeDisplay.textContent = 'N/A';
-                }
-            }
-
-            console.log("showStateActiveSession() chamado");
-        } else {
-            console.warn("showStateActiveSession(): Required elements (estadoIniciar or sessaoAtivaControls) not found.");
-        }
+        sessionProgressBarContainer.style.display = 'flex';
     }
 
     function showAdicionarAtividades() {
-        if (atividadesContainer) {
-            atividadesContainer.style.display = 'block'; // Mostra o container externo!
-        }
-        if (atividadesFormAdicionar) {
-            atividadesFormAdicionar.style.display = 'block';
-        }
-        // Oculta os botões da sessão ativa quando o painel de adicionar atividades é mostrado
-        if (adicionarAtividadesBtn) adicionarAtividadesBtn.style.display = 'none';
-        if (finalizarSessaoBtn) finalizarSessaoBtn.style.display = 'none';
-
-        // Atualiza título e instrução para o contexto de "adicionar"
-        document.getElementById('adicionar-atividades-title').innerHTML = '<i class="bi bi-plus-circle me-2"></i>Adicionar Atividades';
-        document.getElementById('adicionar-atividades-instruction').textContent = 'Selecione as atividades que deseja adicionar à sessão:';
-
+        atividadesContainer.style.display = 'block';
+        sessaoAtivaControls.style.display = 'none';
         loadActivitiesForAdding();
-        // Foco no primeiro checkbox após renderizar
-        setTimeout(() => {
-            const firstCheckbox = atividadesListAdicionar.querySelector('input[type="checkbox"]');
-            if (firstCheckbox) firstCheckbox.focus();
-        }, 100);
-        // Garante que o botão confirmar esteja desabilitado inicialmente
-        const btnConfirmar = document.getElementById('btn-confirmar-adicao');
-        if (btnConfirmar) btnConfirmar.disabled = true;
-
-        // Adiciona listener para habilitar/desabilitar o botão Confirmar
-        if (atividadesListAdicionar) {
-            atividadesListAdicionar.addEventListener('change', function() {
-                const anyChecked = atividadesListAdicionar.querySelector('input[type="checkbox"]:checked');
-                if (btnConfirmar) btnConfirmar.disabled = !anyChecked;
-            });
-        }
+        document.getElementById('btn-confirmar-adicao').disabled = true;
     }
 
     function resetProgressBar() {
-        if (sessionProgressBarContainer) {
-            sessionProgressBarContainer.style.display = 'none';
-        }
-        if (sessionProgressBar) {
-            sessionProgressBar.style.width = '0%';
-            sessionProgressBar.className = 'progress-bar bg-primary';
-        }
-        if (sessionProgressText) {
-            sessionProgressText.textContent = '0%';
-        }
-        if (sessionElapsedTime) {
-            sessionElapsedTime.textContent = '00:00:00';
-        }
-        if (sessionRemainingTime) {
-            sessionRemainingTime.textContent = '00:00:00';
-        }
-        if (sessionStartTimeDisplay) {
-            sessionStartTimeDisplay.textContent = 'N/A';
-        }
-        if (sessionEndTimeDisplay) {
-            sessionEndTimeDisplay.textContent = 'N/A';
-        }
-        appState.totalSessionEstimatedDuration = 0; // Reset estimated duration
+        if(sessionProgressBarContainer) sessionProgressBarContainer.style.display = 'none';
+        if(sessionProgressBar) sessionProgressBar.style.width = '0%';
+        if(sessionProgressText) sessionProgressText.textContent = '0%';
+        if(sessionElapsedTime) sessionElapsedTime.textContent = '00:00:00';
+        if(sessionRemainingTime) sessionRemainingTime.textContent = '00:00:00';
+        if(sessionStartTimeDisplay) sessionStartTimeDisplay.textContent = 'N/A';
+        if(sessionEndTimeDisplay) sessionEndTimeDisplay.textContent = 'N/A';
+        appState.totalSessionEstimatedDuration = 0;
     }
 
-    // --- FUNÇÕES DE LÓGICA DE NEGÓCIO ---
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
 
+    // --- LÓGICA DE NEGÓCIO ---
     async function fetchAPI(url, options = {}) {
-        // Adiciona o token JWT automaticamente se disponível
         const token = appState.jwtToken || localStorage.getItem('jwtToken');
-        if (token) {
             options.headers = {
                 ...options.headers,
-                'Authorization': `Bearer ${token}`
-            };
+            'X-CSRFToken': getCookie('csrftoken')
+        };
+        
+        if (token) {
+            options.headers['Authorization'] = `Bearer ${token}`;
         }
-        const response = await fetch(url, options);
-        if (!response.ok) {
-            const errorData = await response.json();
-            // Se o token expirou, tenta refresh ou redireciona para login
-            if (response.status === 401 && errorData.code === 'token_not_valid') {
-                // Tenta refresh token
+        
+        // Adiciona Content-Type se houver um corpo, para evitar problemas com requisições sem corpo.
+        if (options.body) {
+            options.headers['Content-Type'] = 'application/json';
+        }
+
+        let response = await fetch(url, options);
+
+        if (response.status === 401) {
                 const refreshToken = appState.refreshToken || localStorage.getItem('refreshToken');
                 if (refreshToken) {
                     try {
@@ -671,201 +528,128 @@ if (!localStorage.getItem('jwtToken')) {
                             const refreshData = await refreshResponse.json();
                             appState.jwtToken = refreshData.access;
                             localStorage.setItem('jwtToken', refreshData.access);
-                            // Retenta a requisição original com o novo token
                             options.headers['Authorization'] = `Bearer ${refreshData.access}`;
-                            return fetchAPI(url, options); // Chama a função novamente com o novo token
-                        } else {
-                            showToast('Sessão expirada. Faça login novamente.', 'danger');
-                            showLoginView(); // Redireciona para login se o refresh falhar
-                            throw new Error('Refresh token falhou');
-                        }
-                    } catch (refreshError) {
-                        console.error('Erro ao refrescar token:', refreshError);
-                        showToast('Sessão expirada. Faça login novamente.', 'danger');
-                        showLoginView();
-                        throw refreshError;
+                        return fetch(url, options);
                     }
-                } else {
+                } catch (e) { /* Falha no refresh, continua para o logout */ }
+            }
                     showToast('Sessão expirada. Faça login novamente.', 'danger');
                     showLoginView();
-                    throw new Error('Token não encontrado ou expirado.');
-                }
-            } else {
-                throw new Error(errorData.detail || 'Erro na requisição.');
-            }
+            throw new Error('Token refresh failed or not possible.');
         }
-        return response.json();
+        return response;
     }
 
     async function loadBoxes() {
         showLoading();
         try {
-            const boxes = await fetchAPI('/api/boxes/', {method: 'GET'});
-            selectBox.innerHTML = ''; // Clear existing options
-            selectBox.innerHTML += '<option value="" selected disabled>Escolha um box...</option>';
+            const response = await fetchAPI('/api/boxes/');
+            const boxes = await response.json();
+            selectBox.innerHTML = '<option value="" selected disabled>Escolha um box...</option>';
             boxes.forEach(box => {
-                const option = document.createElement('option');
-                option.value = box.id;
-                option.textContent = box.nome;
-                selectBox.appendChild(option);
+                selectBox.innerHTML += `<option value="${box.id}">${box.nome}</option>`;
             });
-            // Restore selected box if appState.boxId exists
             if (appState.boxId) {
                 selectBox.value = appState.boxId;
             } else if (boxes.length === 1) {
-                // Se houver apenas um box, seleciona automaticamente
                 selectBox.value = boxes[0].id;
                 appState.boxId = boxes[0].id;
-                console.log('[LOG] Apenas um box disponível. Selecionado automaticamente:', appState.boxId);
-            } else if (selectBox.value) {
-                // Se já houver um valor selecionado no dropdown (ex: após refresh), use-o
-                appState.boxId = selectBox.value;
-                console.log('[LOG] Box já selecionado no dropdown ao carregar:', appState.boxId);
             }
         } catch (error) {
-            showToast('Erro ao carregar boxes: ' + error.message, 'danger');
+            showToast('Erro ao carregar boxes.', 'danger');
         } finally {
             hideLoading();
         }
     }
 
-    async function loadActivitiesForInitiation() {
+    async function loadActivities(listElement, url) {
         showLoading();
         try {
-            // Sempre busca todas as atividades disponíveis para iniciar sessão
-            const atividades = await fetchAPI('/api/boxes/atividades-disponiveis/', {method: 'GET'});
-            if (atividadesIniciarList) {
-                atividadesIniciarList.innerHTML = '';
+            const response = await fetchAPI(url);
+            const atividades = await response.json();
+            listElement.innerHTML = '';
                 if (atividades.length > 0) {
                     atividades.forEach(atividade => {
-                        const li = document.createElement('li');
-                        li.className = 'list-group-item d-flex justify-content-between align-items-center';
-                        li.innerHTML = `
+                    listElement.innerHTML += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
                             <span><input type="checkbox" value="${atividade.id}" class="form-check-input me-2"> ${atividade.nome}</span>
                             <span class="badge bg-primary rounded-pill">${atividade.duracao_estimada} min</span>
-                        `;
-                        atividadesIniciarList.appendChild(li);
+                        </li>`;
                     });
-                    if (iniciarBtn) iniciarBtn.style.display = 'inline-block';
+                if(iniciarBtn) iniciarBtn.style.display = 'inline-block';
                 } else {
-                    atividadesIniciarList.innerHTML = '<li class="list-group-item text-muted">Nenhuma atividade disponível.</li>';
-                    if (iniciarBtn) iniciarBtn.style.display = 'none';
-                }
+                listElement.innerHTML = '<li class="list-group-item text-muted">Nenhuma atividade disponível.</li>';
+                if(iniciarBtn) iniciarBtn.style.display = 'none';
             }
         } catch (error) {
-            showToast('Erro ao carregar atividades: ' + error.message, 'danger');
-            console.error('Erro ao carregar atividades para iniciar:', error);
+            showToast('Erro ao carregar atividades.', 'danger');
         } finally {
             hideLoading();
         }
     }
 
-    async function loadActivitiesForAdding() {
-        showLoading();
-        try {
-            // Busca apenas as atividades realmente disponíveis para adicionar (backend já filtra)
-            const available = await fetchAPI('/api/boxes/atividades-disponiveis/', {method: 'GET'});
-            if (atividadesListAdicionar) {
-                atividadesListAdicionar.innerHTML = '';
-                if (available.length === 0) {
-                    atividadesListAdicionar.innerHTML = '<li class="list-group-item text-muted">Nenhuma atividade disponível para adicionar.</li>';
-                    document.getElementById('btn-confirmar-adicao').disabled = true; // No activities, button disabled
-                } else {
-                    available.forEach(a => {
-                        atividadesListAdicionar.innerHTML += `
-                          <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span><input type="checkbox" value="${a.id}" class="form-check-input me-2"> ${a.nome}</span>
-                            <span class="badge bg-primary rounded-pill">${a.duracao_estimada} min</span>
-                          </li>`;
-                    });
-                    // Check for pre-selected and update button state after rendering
-                    const anyChecked = atividadesListAdicionar.querySelector('input[type="checkbox"]:checked');
-                    document.getElementById('btn-confirmar-adicao').disabled = !anyChecked; // Initial state
-                }
-            }
-        } catch (e) {
-            showToast('Erro ao carregar atividades: ' + e.message, 'danger');
-        } finally {
-            hideLoading();
-        }
+    function loadActivitiesForInitiation() {
+        loadActivities(atividadesIniciarList, '/api/boxes/atividades-disponiveis/');
+    }
+
+    function loadActivitiesForAdding() {
+        loadActivities(atividadesListAdicionar, '/api/boxes/atividades-disponiveis/');
     }
 
     function renderSessionActivities(activities) {
-        console.log('[LOG] Atualizando lista de atividades da sessão:', activities);
-        if (sessionActivitiesList) {
             sessionActivitiesList.innerHTML = '';
+        appState.totalSessionEstimatedDuration = 0;
             if (activities && activities.length > 0) {
-                // Se houver mais de 3 atividades, torne a lista scrollável
-                if (activities.length > 3) {
-                    sessionActivitiesList.style.maxHeight = '180px';
-                    sessionActivitiesList.style.overflowY = 'auto';
-                } else {
-                    sessionActivitiesList.style.maxHeight = '';
-                    sessionActivitiesList.style.overflowY = '';
-                }
+            sessionActivitiesList.style.maxHeight = activities.length > 3 ? '180px' : '';
+            sessionActivitiesList.style.overflowY = activities.length > 3 ? 'auto' : '';
                 activities.forEach(activity => {
-                    const li = document.createElement('li');
-                    li.className = 'list-group-item d-flex justify-content-between align-items-center';
-                    li.innerHTML = `
+                appState.totalSessionEstimatedDuration += activity.atividade.duracao_estimada;
+                sessionActivitiesList.innerHTML += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
                         <span><i class="bi bi-check-circle-fill text-success me-2"></i> ${activity.atividade.nome}</span>
                         <span class="badge bg-secondary rounded-pill">${activity.atividade.duracao_estimada} min</span>
-                    `;
-                    sessionActivitiesList.appendChild(li);
+                    </li>`;
                 });
             } else {
                 sessionActivitiesList.innerHTML = '<li class="list-group-item text-muted">Nenhuma atividade na sessão.</li>';
-                sessionActivitiesList.style.maxHeight = '';
-                sessionActivitiesList.style.overflowY = '';
-            }
-        } else {
-            console.warn('Session activities list (session-activities-list) element not found.');
         }
-        // Atualiza barra de progresso e tempo total
-        atualizarBarraDeProgresso(activities);
+        updateTimerAndProgress();
     }
 
-    // Função para atualizar barra de progresso e tempo total
-    function atualizarBarraDeProgresso(activities) {
-        let totalDuration = 0;
-        if (activities && activities.length > 0) {
-            totalDuration = activities.reduce((sum, activity) => sum + (activity.atividade.duracao_estimada || 0), 0);
-        }
-        appState.totalSessionEstimatedDuration = totalDuration;
-        if (sessionProgressBar && sessionProgressText) {
-            const elapsed = getElapsedTime();
-            let percent = totalDuration ? Math.round((elapsed / (totalDuration * 60)) * 100) : 0;
-            if (percent > 100) percent = 100;
-            sessionProgressBar.style.width = percent + '%';
-            sessionProgressText.textContent = percent + '%';
-            // Se passou do tempo, mude a cor
-            if (elapsed > totalDuration * 60) {
-                sessionProgressBar.classList.add('bg-danger');
-            } else {
-                sessionProgressBar.classList.remove('bg-danger');
-            }
-        }
-        if (sessionRemainingTime) {
-            const elapsed = getElapsedTime();
-            const remaining = Math.max(0, (totalDuration * 60) - elapsed);
-            sessionRemainingTime.textContent = formatTime(remaining * 1000);
-        }
-        if (sessionEndTimeDisplay && appState.startTime) {
-            const end = new Date(appState.startTime.getTime() + totalDuration * 60000);
-            sessionEndTimeDisplay.textContent = end.toLocaleTimeString('pt-BR');
-        }
-        // Badge visual de atraso
-        const statusBadge = document.getElementById('status-sessao');
-        if (statusBadge) {
-            if (getElapsedTime() > totalDuration * 60 && totalDuration > 0) {
-                statusBadge.textContent = 'Atrasado';
-                statusBadge.classList.remove('bg-success');
-                statusBadge.classList.add('bg-danger');
-            } else {
-                statusBadge.textContent = 'Em andamento';
-                statusBadge.classList.remove('bg-danger');
-                statusBadge.classList.add('bg-success');
-            }
-        }
+    function formatTime(ms) {
+        const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+        const h = Math.floor(totalSeconds / 3600);
+        const m = Math.floor((totalSeconds % 3600) / 60);
+        const s = totalSeconds % 60;
+        return [h, m, s].map(u => u.toString().padStart(2, '0')).join(':');
+    }
+    
+    function updateTimerAndProgress() {
+        const elapsedMs = new Date() - appState.startTime;
+        const totalDurationMs = appState.totalSessionEstimatedDuration * 60 * 1000;
+        const remainingMs = totalDurationMs - elapsedMs;
+
+        sessionElapsedTime.textContent = formatTime(elapsedMs);
+        sessionRemainingTime.textContent = formatTime(remainingMs);
+        
+        sessionStartTimeDisplay.textContent = appState.startTime.toLocaleTimeString('pt-BR');
+        const endTime = new Date(appState.startTime.getTime() + totalDurationMs);
+        sessionEndTimeDisplay.textContent = endTime.toLocaleTimeString('pt-BR');
+        
+        const progress = totalDurationMs > 0 ? Math.min(100, (elapsedMs / totalDurationMs) * 100) : 0;
+        sessionProgressBar.style.width = `${progress}%`;
+        sessionProgressText.textContent = `${Math.round(progress)}%`;
+
+        const isDelayed = elapsedMs > totalDurationMs && totalDurationMs > 0;
+        sessionProgressBar.classList.toggle('bg-danger', isDelayed);
+        document.getElementById('status-sessao').textContent = isDelayed ? 'Atrasado' : 'Em andamento';
+        document.getElementById('status-sessao').classList.toggle('bg-danger', isDelayed);
+        document.getElementById('status-sessao').classList.toggle('bg-success', !isDelayed);
+    }
+
+    function startSessionTimer() {
+        if (appState.sessionTimer) clearInterval(appState.sessionTimer);
+        appState.sessionTimer = setInterval(updateTimerAndProgress, 1000);
     }
 
     async function checkLoginStatus() {
@@ -875,8 +659,9 @@ if (!localStorage.getItem('jwtToken')) {
             const storedFuncionario = localStorage.getItem('funcionario');
             if (token && storedFuncionario) {
                 appState.funcionario = JSON.parse(storedFuncionario);
-                const data = await fetchAPI('/api/verificar-sessao/', {method: 'GET'});
-                if (data && data.user) {
+                const response = await fetchAPI('/api/verificar-sessao/');
+                if (response.ok) {
+                    const data = await response.json();
                     appState.funcionario = data.user;
                     localStorage.setItem('funcionario', JSON.stringify(appState.funcionario));
                     showAppView();
@@ -890,411 +675,189 @@ if (!localStorage.getItem('jwtToken')) {
             }
             showLoginView();
         } catch (error) {
-            showToast('Erro ao verificar sessão: ' + error.message, 'danger');
-            // Não mostra login aqui, só feedback
+            showLoginView();
         } finally {
             hideLoading();
         }
     }
 
-    // --- Time and Progress Bar Management ---
-    function formatTime(ms) {
-        const totalSeconds = Math.floor(ms / 1000);
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-        return [
-            hours.toString().padStart(2, '0'),
-            minutes.toString().padStart(2, '0'),
-            seconds.toString().padStart(2, '0')
-        ].join(':');
-    }
-
-    function startSessionTimer() {
-        if (appState.sessionTimer) {
-            clearInterval(appState.sessionTimer);
-        }
-
-        const timerDisplay = document.querySelector('.timer-display');
-        const infoInicioSessao = document.getElementById('info-inicio-sessao');
-
-        if (!appState.startTime) {
-            console.error("startTime não definido para o cronômetro da sessão.");
-            return;
-        }
-
-        appState.sessionTimer = setInterval(() => {
-            const currentTime = new Date();
-            const elapsedTime = currentTime - appState.startTime;
-            let remainingTime = appState.totalSessionEstimatedDuration * 60 * 1000 - elapsedTime;
-
-            if (remainingTime <= 0) {
-                clearInterval(appState.sessionTimer);
-                appState.sessionTimer = null;
-                remainingTime = 0;
-            }
-
-            const formattedTime = formatTime(remainingTime);
-            timerDisplay.textContent = formattedTime;
-            infoInicioSessao.textContent = `Início: ${new Date(appState.startTime).toLocaleTimeString()}`;
-
-            if (sessionProgressBarContainer) {
-                let progressPercentage = 0;
-                if (appState.totalSessionEstimatedDuration > 0) {
-                    progressPercentage = Math.max(0, Math.min(100, Math.round((elapsedTime / (appState.totalSessionEstimatedDuration * 60 * 1000)) * 100)));
-                }
-                sessionProgressBar.style.width = `${progressPercentage}%`;
-                sessionProgressBar.setAttribute('aria-valuenow', progressPercentage);
-            }
-
-            if (sessionElapsedTime) {
-                sessionElapsedTime.textContent = formatTime(elapsedTime);
-            }
-            if (sessionRemainingTime) {
-                sessionRemainingTime.textContent = formatTime(remainingTime);
-            }
-        }, 100);
-    }
-
     // --- EVENT LISTENERS ---
-    matriculaForm.addEventListener('submit', async function(e) {
+    selectBox.addEventListener('change', () => { appState.boxId = selectBox.value; });
+
+    atividadesIniciarList.addEventListener('change', () => {
+        iniciarBtn.disabled = !atividadesIniciarList.querySelector('input:checked');
+    });
+
+    atividadesListAdicionar.addEventListener('change', () => {
+        document.getElementById('btn-confirmar-adicao').disabled = !atividadesListAdicionar.querySelector('input:checked');
+    });
+
+    matriculaForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        console.log('[LOG] Formulário de matrícula submetido');
         const matricula = matriculaInput.value.trim();
-        if (!matricula) {
-            console.log('[LOG] Matrícula vazia');
-            showToast('Por favor, digite sua matrícula', 'warning');
-            return;
-        }
-        if (!appState.boxId) {
-            console.log('[LOG] Box não selecionado');
-            showToast('Por favor, selecione um box', 'warning');
-            return;
-        }
-        console.log('[LOG] Buscando funcionário por matrícula:', matricula);
+        if (!appState.boxId) return showToast('Por favor, selecione um box', 'warning');
+        if (!matricula) return showToast('Por favor, digite sua matrícula', 'warning');
+        
         showLoading();
         try {
             const response = await fetch(`/api/funcionarios/?matricula=${encodeURIComponent(matricula)}`);
             const data = await response.json();
-            console.log('[LOG] Resposta da API (funcionarios):', data);
-            if (response.ok && Array.isArray(data) && data.length > 0) {
+            if (response.ok && data.length > 0) {
                 appState.currentMatricula = matricula;
                 appState.funcionario = data[0];
-                console.log('[LOG] Matrícula encontrada, mostrando modal de senha');
-                if (senhaModal) {
                     senhaModal.show();
                 } else {
-                    console.error('[LOG] Modal de senha não encontrado');
-                }
-            } else {
-                console.log('[LOG] Matrícula não encontrada');
                 showToast('Matrícula não encontrada', 'danger');
             }
         } catch (error) {
-            console.error('[LOG] Erro ao buscar funcionário:', error);
-            showToast('Erro ao buscar funcionário: ' + error.message, 'danger');
+            showToast('Erro ao buscar funcionário.', 'danger');
         } finally {
             hideLoading();
         }
     });
 
-        senhaForm.addEventListener('submit', async function(e) {
+    senhaForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-        console.log('[LOG] Formulário de senha submetido');
-        const senha = senhaInput.value.trim();
-        if (!senha) {
-            console.log('[LOG] Senha vazia');
-            showToast('Por favor, digite sua senha', 'warning');
-            return;
-        }
-        console.log('[LOG] Enviando senha para autenticação');
+        const senha = senhaInput.value;
+        if (!senha) return showToast('Por favor, digite sua senha', 'warning');
+
         showLoading();
         try {
             const response = await fetch('/api/login/', {
                     method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                    body: JSON.stringify({
-                    matricula: appState.currentMatricula,
-                    senha: senha
-                    })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ matricula: appState.currentMatricula, senha: senha })
                 });
             const data = await response.json();
-            console.log('[LOG] Resposta da API:', data);
             if (response.ok) {
-                console.log('[LOG] Login bem sucedido, salvando tokens e dados do usuário');
-                localStorage.setItem('jwtToken', data.access);
                 localStorage.setItem('jwtToken', data.access);
                 localStorage.setItem('refreshToken', data.refresh);
                 localStorage.setItem('funcionario', JSON.stringify(data.user));
-                appState.funcionario = data.user;
                 appState.jwtToken = data.access;
                 appState.refreshToken = data.refresh;
-                // Atualiza o nome do usuário na navbar principal
-                const navbarUserSpan = document.querySelector('#navbarNav .dropdown-toggle span');
-                if (navbarUserSpan) {
-                    navbarUserSpan.textContent = data.user.nome_completo || data.user.username;
-                }
-                if (senhaModal) {
-                    senhaModal.hide();
-                }
-                showAppView();
-                showStateIniciar(appState.boxId);
-                atualizarNavbarUsuario();
+                appState.funcionario = data.user;
+                
+                // Espera o modal ser completamente escondido para evitar problemas de foco
+                const senhaModalElement = document.getElementById('senhaModal');
+                senhaModalElement.addEventListener('hidden.bs.modal', async () => {
+                    await checkLoginStatus();
+                }, { once: true });
+
+                senhaModal.hide();
             } else {
-                console.log('[LOG] Erro na autenticação:', data.detail);
                 showToast(data.detail || 'Senha incorreta', 'danger');
             }
             } catch (error) {
-            console.error('[LOG] Erro ao fazer login:', error);
-            showToast('Erro ao fazer login: ' + error.message, 'danger');
+            showToast('Erro ao fazer login.', 'danger');
         } finally {
             hideLoading();
         }
     });
 
-    // Toggle password visibility
-    if (togglePasswordBtn) {
-        togglePasswordBtn.addEventListener('click', function() {
-            console.log('[LOG] Toggle password visibility');
-            const type = senhaInput.type === 'password' ? 'text' : 'password';
-            senhaInput.type = type;
-            const icon = this.querySelector('i');
-            icon.classList.toggle('bi-eye');
-            icon.classList.toggle('bi-eye-slash');
-        });
-    }
+    atividadesFormIniciar.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const atividades = Array.from(atividadesIniciarList.querySelectorAll('input:checked')).map(cb => cb.value);
+        if (atividades.length === 0) return showToast('Selecione ao menos uma atividade.', 'warning');
 
-    if (finalizarSessaoBtn) {
-        finalizarSessaoBtn.addEventListener('click', async function() {
-            if (!appState.sessaoId || !appState.boxId) {
-                showToast('Sessão ou box não encontrados.', 'danger');
-                return;
-            }
             showLoading();
             try {
-                const response = await fetch(`/api/boxes/${appState.boxId}/sessao-servico/finalizar/`, {
+            const response = await fetchAPI(`/api/boxes/${appState.boxId}/sessao-servico/iniciar/`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${appState.jwtToken}`
-                    },
-                    body: JSON.stringify({ sessao_id: appState.sessaoId })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ atividades })
                 });
                 const data = await response.json();
                 if (response.ok) {
-                    showToast('Sessão finalizada com sucesso!', 'success');
-                    showStateIniciar(appState.boxId);
+                showToast('Sessão iniciada com sucesso!', 'success');
+                showStateActiveSession(data);
             } else {
-                    showToast(data.detail || 'Erro ao finalizar sessão.', 'danger');
+                showToast(data.detail || 'Erro ao iniciar sessão.', 'danger');
                 }
             } catch (error) {
-                showToast('Erro ao finalizar sessão: ' + error.message, 'danger');
+            showToast('Erro ao iniciar sessão.', 'danger');
             } finally {
                 hideLoading();
             }
         });
-    }
 
-    // Event listener para o botão Adicionar Atividade
-    if (adicionarAtividadesBtn) {
-        adicionarAtividadesBtn.addEventListener('click', function() {
-            console.log('[LOG] Clique no botão Adicionar Atividade');
-            if (sessaoAtivaControls) sessaoAtivaControls.style.display = 'none'; // Oculta controles da sessão
-            showAdicionarAtividades(); // Mostra o container de adicionar atividades
-        });
-    }
+    atividadesFormAdicionar.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        console.log("Formulário de adicionar atividade submetido!");
 
-    // Event listener para o botão Cancelar Adição de Atividade
-    if (cancelarAdicionarBtn) {
-        cancelarAdicionarBtn.addEventListener('click', function() {
-            console.log('[LOG] Clique no botão Cancelar Adição de Atividade');
-            if (atividadesContainer) atividadesContainer.style.display = 'none'; // Oculta o container de adicionar atividades
-            if (sessaoAtivaControls) sessaoAtivaControls.style.display = 'block'; // Mostra controles da sessão
-        });
-    }
+        const atividades = Array.from(atividadesListAdicionar.querySelectorAll('input:checked')).map(cb => cb.value);
+        if (atividades.length === 0) return showToast('Selecione ao menos uma atividade.', 'warning');
 
-    // Submit do formulário de adicionar atividades
-    if (atividadesFormAdicionar) {
-        atividadesFormAdicionar.onsubmit = async function(e) {
-            e.preventDefault();
-            // Verifica se boxId está definido
-            if (!appState.boxId) {
-                console.log('[LOG] boxId não definido no submit');
-                showToast('Erro: Box não selecionado.', 'danger');
-                return;
-            }
-            const checkboxes = atividadesFormAdicionar.querySelectorAll('input[type="checkbox"]:checked');
-            const atividades = Array.from(checkboxes).map(cb => parseInt(cb.value));
-            console.log('[LOG] IDs das atividades selecionadas para adicionar:', atividades);
-            if (atividades.length === 0) {
-                showToast('Selecione pelo menos uma atividade.', 'danger');
-                return;
-            }
-            showLoading();
-            try {
-                console.log('[LOG] Enviando POST para adicionar atividades. boxId:', appState.boxId);
-                const response = await fetch(`/api/boxes/${appState.boxId}/sessao-servico/adicionar-atividades/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${appState.jwtToken}`
-                    },
-                    body: JSON.stringify({ atividades })
-                });
-                const data = await response.json();
-                console.log('[LOG] Resposta da API ao adicionar atividades:', data);
-                if (response.ok) {
-                    showToast('Atividades adicionadas com sucesso!', 'success');
-                    // Após adicionar, volta para a tela da sessão ativa e a atualiza
-                    if (atividadesContainer) atividadesContainer.style.display = 'none'; // Oculta o container de adicionar atividades
-                    if (sessaoAtivaControls) sessaoAtivaControls.style.display = 'block'; // Mostra controles da sessão
-                    // Atualiza a UI da sessão
-                    const sessionData = await fetchAPI('/api/verificar-sessao/', {method: 'GET'});
-                    if (sessionData && sessionData.active_session) {
-                        showStateActiveSession(sessionData.active_session);
-                    }
-                } else {
-                    showToast(data.detail || 'Erro ao adicionar atividades.', 'danger');
+        showLoading();
+        try {
+            const response = await fetchAPI(`/api/boxes/${appState.boxId}/sessao-servico/adicionar-atividades/`, {
+                method: 'POST',
+                body: JSON.stringify({ atividades })
+            });
+            const responseText = await response.text();
+            console.log("RAW RESPONSE FROM SERVER:", responseText);
+
+            if (response.ok) {
+                const data = JSON.parse(responseText);
+                showToast('Atividades adicionadas!', 'success');
+                showStateActiveSession(data);
+            } else {
+                console.error("Server returned an error:", responseText);
+                try {
+                    const errorData = JSON.parse(responseText);
+                    showToast(errorData.detail || 'Erro ao adicionar atividades.', 'danger');
+                } catch (e) {
+                    showToast('Ocorreu um erro inesperado no servidor.', 'danger');
                 }
-            } catch (error) {
-                console.error('[LOG] Erro ao adicionar atividades:', error);
-                showToast('Erro ao adicionar atividades: ' + error.message, 'danger');
-            } finally {
-                hideLoading();
             }
-        };
-    }
+        } catch (error) {
+            console.error("Fetch API call failed:", error);
+            showToast('Erro de rede ao tentar adicionar atividades.', 'danger');
+        } finally {
+            hideLoading();
+        }
+    });
 
-    // Submit do formulário de iniciar sessão
-    if (atividadesFormIniciar) {
-        atividadesFormIniciar.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            // Adiciona uma verificação para garantir que um box foi selecionado
-            if (!appState.boxId) {
-                showToast('Por favor, selecione um box para iniciar a sessão.', 'warning');
-                return;
-            }
-
-            const checkboxes = atividadesFormIniciar.querySelectorAll('input[type="checkbox"]:checked');
-            const atividades = Array.from(checkboxes).map(cb => parseInt(cb.value));
-            console.log('[LOG CABRA] Atividades selecionadas para iniciar sessão:', atividades);
-            if (atividades.length === 0) {
-                showToast('Selecione pelo menos uma atividade.', 'danger');
-                return;
-            }
-                showLoading();
-            try {
-                const response = await fetch(`/api/boxes/${appState.boxId}/sessao-servico/iniciar/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${appState.jwtToken}`
-                    },
-                    body: JSON.stringify({ atividades })
-                });
-                const data = await response.json();
-                console.log('[LOG CABRA] Resposta da API ao iniciar sessão:', data);
-                if (response.ok) {
-                    showToast('Sessão iniciada com sucesso!', 'success');
-                    showStateActiveSession(data);
-                } else if (response.status === 409) {
-                    showToast('Já existe uma sessão ativa neste box. Redirecionando...', 'warning');
-                await checkLoginStatus(); 
-                } else {
-                    showToast(data.detail || 'Erro ao iniciar sessão.', 'danger');
-                }
-            } catch (error) {
-                console.error('[LOG CABRA] Erro ao iniciar sessão:', error);
-                showToast('Erro ao iniciar sessão: ' + error.message, 'danger');
-            } finally {
-                hideLoading();
-            }
-        });
-    }
-
-    // --- INITIALIZATION ---
-    console.log('[LOG] Iniciando carregamento dos boxes');
-    // Chamada para carregar os boxes ao iniciar
-    await loadBoxes();
-    console.log('[LOG] Verificando status de login');
-    // Verificar status de login
-    await checkLoginStatus();
-
-    // Removido: A atualização da navbar agora é gerenciada por showLoginView/showAppView
-    // atualizarNavbarUsuario();
-
-// Expor funções para testes manuais no window
-window.testFinalizarSessao = async function() {
-    if (!appState.sessaoId || !appState.boxId) { showToast('Sessão ou box não encontrados.', 'danger'); return; }
+    finalizarSessaoBtn.addEventListener('click', async () => {
                 showLoading();
     try {
-        const response = await fetch(`/api/boxes/${appState.boxId}/sessao-servico/finalizar/`, {
-                    method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${appState.jwtToken}`
-            },
-            body: JSON.stringify({ sessao_id: appState.sessaoId })
-        });
-        const data = await response.json();
+            const response = await fetchAPI(`/api/boxes/${appState.boxId}/sessao-servico/finalizar/`, { method: 'POST' });
         if (response.ok) {
             showToast('Sessão finalizada com sucesso!', 'success');
             showStateIniciar(appState.boxId);
         } else {
-            showToast(data.detail || 'Erro ao finalizar sessão.', 'danger');
-        }
-            } catch (error) {
-        showToast('Erro ao finalizar sessão: ' + error.message, 'danger');
-            } finally {
-                hideLoading();
-            }
-};
-window.testAdicionarAtividade = async function(atividadeId) {
-    if (!appState.sessaoId || !appState.boxId) { showToast('Sessão ou box não encontrados.', 'danger'); return; }
-    showLoading();
-    try {
-        const response = await fetch(`/api/boxes/${appState.boxId}/sessao-servico/adicionar-atividades/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${appState.jwtToken}`
-            },
-            body: JSON.stringify({ atividades: [atividadeId] })
-        });
-        const data = await response.json();
-        console.log('[LOG] Resposta da API ao adicionar atividades:', data);
-        if (response.ok) {
-            showToast('Atividade adicionada com sucesso!', 'success');
-            const sessionData = await fetchAPI('/api/verificar-sessao/', {method: 'GET'});
-            if (sessionData && sessionData.active_session) {
-                showStateActiveSession(sessionData.active_session);
-            }
-        } else {
-            showToast(data.detail || 'Erro ao adicionar atividade.', 'danger');
+                let errorData;
+                const errorText = await response.text();
+                try {
+                    errorData = JSON.parse(errorText);
+                    showToast(errorData.detail || 'Erro ao finalizar sessão.', 'danger');
+                } catch (e) {
+                    console.error("Erro não-JSON do servidor:", errorText);
+                    showToast('Ocorreu um erro inesperado no servidor.', 'danger');
+                }
         }
     } catch (error) {
-        console.error('[LOG] Erro ao adicionar atividades:', error);
-        showToast('Erro ao adicionar atividade: ' + error.message, 'danger');
+            console.error("Erro na chamada fetch:", error);
+            showToast('Erro de rede ao tentar finalizar a sessão.', 'danger');
     } finally {
         hideLoading();
     }
-};
+    });
 
-// Função utilitária para calcular o tempo decorrido desde o início da sessão
-function getElapsedTime() {
-    if (!appState.startTime) return 0;
-    return Math.floor((Date.now() - appState.startTime.getTime()) / 1000); // segundos
-    }
+    adicionarAtividadesBtn.addEventListener('click', showAdicionarAtividades);
+    cancelarAdicionarBtn.addEventListener('click', () => {
+        sessaoAtivaControls.style.display = 'block';
+        atividadesContainer.style.display = 'none';
+    });
 
-    // Adiciona event listener para atualizar appState.boxId ao selecionar um box
-    if (selectBox) {
-        selectBox.addEventListener('change', function() {
-            appState.boxId = this.value;
-            console.log('[LOG] Box selecionado:', appState.boxId);
-        });
-    }
+    togglePasswordBtn.addEventListener('click', () => {
+        senhaInput.type = senhaInput.type === 'password' ? 'text' : 'password';
+        togglePasswordBtn.querySelector('i').classList.toggle('bi-eye');
+        togglePasswordBtn.querySelector('i').classList.toggle('bi-eye-slash');
+    });
+
+    // --- INICIALIZAÇÃO ---
+    await loadBoxes();
+    await checkLoginStatus();
 });
 </script>
 {% endblock %}

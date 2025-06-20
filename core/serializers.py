@@ -42,7 +42,8 @@ class SessaoAtividadeSerializer(serializers.ModelSerializer):
 
 class SessaoServicoSerializer(serializers.ModelSerializer):
     funcionario = FuncionarioSerializer(read_only=True)
-    box = BoxSerializer(read_only=True)
+    box_id = serializers.IntegerField(source='box.id', read_only=True)
+    box_nome = serializers.CharField(source='box.nome', read_only=True)
     atividades = SessaoAtividadeSerializer(many=True, read_only=True)
     duracao_real = serializers.SerializerMethodField()
     soma_estimada_min = serializers.SerializerMethodField()
@@ -50,7 +51,7 @@ class SessaoServicoSerializer(serializers.ModelSerializer):
     class Meta:
         model = SessaoServico
         fields = [
-            'id', 'box', 'funcionario', 'data_hora_inicio', 'data_hora_fim', 
+            'id', 'box_id', 'box_nome', 'funcionario', 'data_hora_inicio', 'data_hora_fim',
             'atividades', 'duracao_real', 'soma_estimada_min'
         ]
 

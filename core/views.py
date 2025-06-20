@@ -295,18 +295,29 @@ class BoxViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='sessao-servico/finalizar', permission_classes=[permissions.IsAuthenticated], authentication_classes=[JWTAuthentication])
     def finalizar_sessao(self, request, pk=None):
+        """
+        Finaliza a sessão de serviço ativa para o funcionário logado no box especificado.
+        """
         box = self.get_object()
-        func = request.user.funcionario
-        sess_id = request.data.get('sessao_id')
-        if not sess_id:
-            return Response({'detail': 'sessao_id obrigatório.'}, status=status.HTTP_400_BAD_REQUEST)
-        sess = get_object_or_404(SessaoServico, id=sess_id, box=box, funcionario=func)
-        if sess.data_hora_fim:
-            return Response({'detail': 'Sessão já finalizada.'}, status=status.HTTP_400_BAD_REQUEST)
-        sess.data_hora_fim = timezone.now()
-        sess.save()
-        # publish.single(f"boxes/{box.id}/light", 'green', hostname='localhost')
-        return Response({'status': 'finalizado'})
+        funcionario = request.user.funcionario
+
+        # Busca a sessão ativa específica para este funcionário e este box.
+        sessao = get_object_or_404(
+            SessaoServico,
+            box=box,
+            funcionario=funcionario,
+            data_hora_fim__isnull=True
+        )
+
+        sessao.data_hora_fim = timezone.now()
+        sessao.save()
+
+        try:
+            publish.single(f"box/{box.id}/status", "livre", hostname="127.0.0.1")
+        except Exception as e:
+            print(f"Erro ao publicar no MQTT: {e}")
+
+        return Response({'detail': 'Sessão finalizada com sucesso.'}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'], url_path='sessao-servico/adicionar-atividades', permission_classes=[permissions.IsAuthenticated], authentication_classes=[JWTAuthentication])
     def adicionar_atividades(self, request, pk=None):
@@ -333,7 +344,14 @@ class BoxViewSet(viewsets.ReadOnlyModelViewSet):
                 added.append(atv_id)
         if not added:
             return Response({'detail': 'Nenhuma atividade nova adicionada.'})
-        return Response({'detail': f'Atividades adicionadas: {added}'})
+        
+        # Recarrega a instância da sessão do banco de dados para garantir que os dados
+        # do relacionamento (atividades) estejam atualizados antes da serialização.
+        sess_recarregada = SessaoServico.objects.get(id=sess.id)
+
+        # Retorna a sessão atualizada
+        serializer = SessaoServicoSerializer(sess_recarregada)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
