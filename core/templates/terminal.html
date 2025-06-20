@@ -467,6 +467,8 @@ if (!localStorage.getItem('jwtToken')) {
             appState.refreshToken = null;
             console.log("showLoginView() chamado");
             resetProgressBar();
+            // Atualiza a navbar para refletir o estado de deslogado
+            if (typeof atualizarNavbarUsuario === 'function') atualizarNavbarUsuario();
         }
     }
 
@@ -481,6 +483,8 @@ if (!localStorage.getItem('jwtToken')) {
                 navbarUserSpan.textContent = appState.funcionario.nome_completo;
                 console.log("showAppView(): Welcome message updated for: ", appState.funcionario.nome_completo);
             }
+            // Atualiza a navbar para refletir o estado de logado
+            if (typeof atualizarNavbarUsuario === 'function') atualizarNavbarUsuario();
             console.log("showAppView() chamado");
         }
     }
@@ -1218,8 +1222,8 @@ if (!localStorage.getItem('jwtToken')) {
     // Verificar status de login
     await checkLoginStatus();
 
-    // Preenche o nome do usuário na navbar ao carregar a página
-    atualizarNavbarUsuario();
+    // Removido: A atualização da navbar agora é gerenciada por showLoginView/showAppView
+    // atualizarNavbarUsuario();
 
 // Expor funções para testes manuais no window
 window.testFinalizarSessao = async function() {

@@ -135,7 +135,7 @@
                                     <button type="submit" class="dropdown-item text-danger">Sair do Admin</button>
                                 </form>
                                 {% else %}
-                                <form method="post" action="/logout/" style="margin: 0;" onsubmit="localStorage.removeItem('jwtToken'); localStorage.removeItem('refreshToken'); localStorage.removeItem('funcionario'); if (window.appState) { appState.funcionario = null; appState.jwtToken = null; appState.refreshToken = null; } if (typeof atualizarNavbarUsuario === 'function') atualizarNavbarUsuario(); setTimeout(function(){ window.location.href='/terminal/'; }, 100);">
+                                <form method="post" action="/logout/" style="margin: 0;">
                                     {% csrf_token %}
                                     <button type="submit" class="dropdown-item text-danger">Sair</button>
                                 </form>
@@ -185,8 +185,6 @@
                 nameSpan.textContent = '';
             }
         }
-
-        document.addEventListener('DOMContentLoaded', atualizarNavbarUsuario);
     </script>
     {% block scripts %}{% endblock %}
 </body>
