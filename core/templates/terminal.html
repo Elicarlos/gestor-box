@@ -1121,7 +1121,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                             hideLoading();
                         }
                     };
-        });
+        }
 
     // Submit do formulário
     if (atividadesFormIniciar) {
@@ -1243,5 +1243,6 @@ function getElapsedTime() {
     if (!appState.startTime) return 0;
     return Math.floor((Date.now() - appState.startTime.getTime()) / 1000); // segundos
 }
+});
 </script>
 {% endblock %}
